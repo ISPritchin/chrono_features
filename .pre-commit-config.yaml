@@ -1,0 +1,22 @@
+repos:
+  # Форматирование кода
+  - repo: https://github.com/psf/black
+    rev: 23.9.1  # Укажите актуальную версию
+    hooks:
+      - id: black
+
+  - repo: local
+    hooks:
+    - id: ruff
+      name: ruff
+      entry: ruff check
+      language: system
+      types: [python]
+      args: [--fix]
+    - id: pytest
+      name: pytest
+      entry: pytest
+      language: system
+      types: [python]
+      pass_filenames: false
+      always_run: true
