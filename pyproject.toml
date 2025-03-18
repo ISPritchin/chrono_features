@@ -1,0 +1,14 @@
+[project]
+name = "chrono_features"
+description = "Generate features for TimeSeries"
+readme = "README.md"
+authors = [
+  { name = "Pritchin Ivan", email = "ispritchin@gmail.com" },
+]
+license = { file = "LICENSE" }
+requires-python = ">=3.9"
+
+keywords = ["timeseries", "features"]
+
+[tool.black]
+line-length = 120
