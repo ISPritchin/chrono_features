@@ -1,3 +1,7 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "chrono_features"
 description = "Generate features for TimeSeries"
@@ -10,5 +14,11 @@ requires-python = ">=3.9"
 
 keywords = ["timeseries", "features"]
 
+[project.urls]
+"Homepage" = "https://github.com/ISPritchin/chrono_features"
+
 [tool.black]
 line-length = 120
+
+[tool.pytest.ini_options]
+addopts = "-v --cov=deltachain --cov-report=term-missing"

@@ -8,12 +8,12 @@ repos:
   - repo: local
     hooks:
     - id: ruff
-      name: ruff
+      name: Ruff
       entry: ruff check
       language: system
       types: [python]
       args: [--fix]
-    - id: pytest
+    - id: Pytest
       name: pytest
       entry: pytest
       language: system
