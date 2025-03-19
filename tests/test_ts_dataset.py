@@ -42,7 +42,12 @@ def test_add_feature():
     dataset.add_feature(new_column_name, new_values)
 
     expected_data = pl.DataFrame(
-        {"id": [1, 2, 3], "ts": [100, 200, 300], "value": [10, 20, 30], "new_feature": [100, 200, 300]}
+        {
+            "id": [1, 2, 3],
+            "ts": [100, 200, 300],
+            "value": [10, 20, 30],
+            "new_feature": [100, 200, 300],
+        }
     )
 
     assert dataset.data.equals(expected_data)

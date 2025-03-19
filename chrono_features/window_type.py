@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Optional
 
 
 class WindowBase(ABC):
@@ -63,14 +62,6 @@ class WindowType:
 
     class EXPANDING(WindowBase):
         """An expanding window."""
-
-        def __init__(self, len_column_name: Optional[str] = None):
-            """Initializes the EXPANDING window.
-
-            Args:
-                len_column_name (Optional[str], optional): The name of the column (if any). Defaults to None.
-            """
-            self.len_column_name = len_column_name
 
         @property
         def suffix(self) -> str:
