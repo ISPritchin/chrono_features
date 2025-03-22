@@ -22,4 +22,4 @@ keywords = ["timeseries", "features"]
 line-length = 120
 
 [tool.pytest.ini_options]
-addopts = "-v --cov=deltachain --cov-report=term-missing"
+addopts = "-v --testmon"

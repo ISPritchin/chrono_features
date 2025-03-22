@@ -45,6 +45,51 @@ def _calculate_rolling_window_length(ids: np.ndarray, window_size: int, only_ful
     return lens
 
 
+def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.ndarray:
+    """
+    Calculate window lengths for each point in the dataset.
+
+    Args:
+        dataset (TSDataset): The input dataset.
+        window_type (WindowBase): The type of window (expanding, rolling, etc.).
+        id_column_name (str): The name of the column containing IDs.
+
+    Returns:
+        np.ndarray: Array of window lengths for each point.
+    """
+    if isinstance(window_type, WindowType.DYNAMIC):
+        return dataset.data[window_type.len_column_name].to_numpy()
+
+    # Get the IDs and convert them to a hash for consistent comparison
+    ids = dataset._get_numeric_id_column_values()
+
+    # Calculate window lengths based on the window type
+    if isinstance(window_type, WindowType.EXPANDING):
+        return _calculate_expanding_window_length(ids)
+    elif isinstance(window_type, WindowType.ROLLING):
+        return _calculate_rolling_window_length(ids, window_type.size, window_type.only_full_window)
+    else:
+        raise ValueError(f"Unsupported window type: {window_type}")
+
+
+@numba.njit
+def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
+    ts_lens = np.empty(len(ids), dtype=np.int32)
+    current_id_index = 0
+    current_len = 1
+    for i in range(1, len(ids)):
+        print(ts_lens)
+        if ids[i] != ids[i - 1]:
+            ts_lens[current_id_index] = current_len
+            current_id_index += 1
+            current_len = 1
+        else:
+            current_len += 1
+    ts_lens[current_id_index] = current_len
+    print(ts_lens)
+    return ts_lens[: current_id_index + 1]
+
+
 class FeatureGenerator(ABC):
     def __init__(self, columns: list[str] | str, window_type: WindowType, out_column_name=None):
         if isinstance(columns, str):
@@ -56,33 +101,15 @@ class FeatureGenerator(ABC):
             raise ValueError
 
         self.columns = columns
-        self.generate_type = window_type
+        self.window_type = window_type
         self.out_column_name = out_column_name
-
-    def calculate_len(self, dataset: TSDataset) -> np.ndarray:
-        if isinstance(self.generate_type, WindowType.DYNAMIC):
-            return dataset.data[self.generate_type.len_column_name].to_numpy()
-
-        ids = dataset.data[dataset.id_column_name].hash().to_numpy()
-
-        # Вызов оптимизированной функции для расчета длины окон
-        if isinstance(self.generate_type, WindowType.EXPANDING):
-            lens = _calculate_expanding_window_length(ids)
-        elif isinstance(self.generate_type, WindowType.ROLLING):
-            window_size = self.generate_type.size
-            only_full_window = self.generate_type.only_full_window
-            lens = _calculate_rolling_window_length(ids, window_size, only_full_window)
-        else:
-            raise ValueError(f"Unsupported generate_type: {self.generate_type}")
-
-        return lens
 
     @abstractmethod
     def transform(self, dataset: TSDataset) -> np.ndarray:
         raise NotImplementedError
 
 
-class _FromNumbaFunc(FeatureGenerator):
+class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
     """
     Base class for feature generators that use Numba-optimized functions.
     Applies a Numba-compiled function to sliding or expanding windows of data.
@@ -179,7 +206,11 @@ class _FromNumbaFunc(FeatureGenerator):
                 raise ValueError(f"Column '{column}' not found in the dataset.")
 
             # Calculate window lengths
-            lens = self.calculate_len(dataset)
+            lens = calculate_window_lengths(
+                dataset=dataset,
+                window_type=self.window_type,
+            )
+            print(lens)
 
             # Apply the function to the feature array
             feature_array = dataset.data[column].to_numpy()
@@ -189,3 +220,12 @@ class _FromNumbaFunc(FeatureGenerator):
             dataset.data = dataset.data.with_columns(pl.Series(result_array).alias(out_column_name))
 
         return dataset
+
+
+@numba.njit
+def process_dynamic(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
+    """
+    Process one time series using the dynamic window approach.
+    This method must be implemented by subclasses.
+    """
+    raise NotImplementedError

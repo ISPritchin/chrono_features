@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from enum import Enum
 
 
 class WindowBase(ABC):
@@ -71,3 +72,11 @@ class WindowType:
                 str: A string representing the window type suffix.
             """
             return "expanding"
+
+
+class WindowTypeEnum(Enum):
+    """Enum for window types."""
+
+    EXPANDING = 0
+    ROLLING = 1
+    DYNAMIC = 2

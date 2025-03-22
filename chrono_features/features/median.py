@@ -1,11 +1,11 @@
 import numba
 import numpy as np
 
-from chrono_features.features._base import _FromNumbaFunc
+from chrono_features.features._base import _FromNumbaFuncWithoutCalculatedForEachTSPoint
 from chrono_features.window_type import WindowType
 
 
-class Median(_FromNumbaFunc):
+class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     def __init__(
         self,
         columns: list[str] | str,

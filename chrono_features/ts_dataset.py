@@ -111,3 +111,9 @@ class TSDataset:
             raise ValueError(f"Column '{name}' already exists.")
 
         self.data = self.data.with_columns(pl.Series(values).alias(name))
+
+    def _get_numeric_id_column_values(self):
+        if not self.data.schema[self.id_column_name].is_numeric():
+            return self.data[self.id_column_name].hash().to_numpy()
+
+        return self.data[self.id_column_name].to_numpy()
