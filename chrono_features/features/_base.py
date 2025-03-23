@@ -200,7 +200,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         if not self.columns:
             raise ValueError("No columns specified for transformation.")
 
-        if len(self.columns) != len(self.out_column_names):
+        if len(self.columns) * len(self.window_types) != len(self.out_column_names):
             raise ValueError("The number of columns and output column names must match.")
 
         for (column, window_type), out_column_name in zip(
