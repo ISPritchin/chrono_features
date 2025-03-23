@@ -37,20 +37,20 @@ class TestMedianNumbaLevel:
     def test_initialization(self, sample_window_types):
         """Проверка инициализации Median с default и custom out_column_name."""
         # Тест с default out_column_name
-        median_default = Median(columns="value", window_type=sample_window_types["expanding"])
+        median_default = Median(columns="value", window_types=sample_window_types["expanding"])
         assert median_default.out_column_names == ["value_median_expanding"]
 
         # Тест с custom out_column_name
         median_custom = Median(
             columns="value",
-            window_type=sample_window_types["rolling_full"],
+            window_types=sample_window_types["rolling_full"],
             out_column_names="custom_median",
         )
         assert median_custom.out_column_names == ["custom_median"]
 
     def test_numba_func(self):
         """Проверка, что _numba_func корректно вычисляет медиану массива."""
-        median_calculator = Median(columns="value", window_type=WindowType.EXPANDING())
+        median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         test_array = np.array([1, 2, 3, 4, 5], dtype=np.float32)
         expected_median = np.median(test_array)
         result = median_calculator._numba_func(test_array)
@@ -58,7 +58,7 @@ class TestMedianNumbaLevel:
 
     def test_transform_expanding_window(self, sample_ts_dataset):
         """Проверка transform с expanding window."""
-        median_calculator = Median(columns="value", window_type=WindowType.EXPANDING())
+        median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
 
         # Проверка, что новая колонка добавлена
@@ -73,7 +73,7 @@ class TestMedianNumbaLevel:
         """Проверка transform с rolling window (only_full_window=True)."""
         median_calculator = Median(
             columns="value",
-            window_type=WindowType.ROLLING(size=2, only_full_window=True),
+            window_types=WindowType.ROLLING(size=2, only_full_window=True),
         )
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
 
@@ -89,7 +89,7 @@ class TestMedianNumbaLevel:
         """Проверка transform с rolling window (only_full_window=False)."""
         median_calculator = Median(
             columns="value",
-            window_type=WindowType.ROLLING(size=2, only_full_window=False),
+            window_types=WindowType.ROLLING(size=2, only_full_window=False),
         )
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
 
@@ -107,7 +107,7 @@ class TestMedianNumbaLevel:
         sample_ts_dataset.data = sample_ts_dataset.data.with_columns(pl.Series("dynamic_len", [1, 2, 1, 1, 2, 1]))
         median_calculator = Median(
             columns="value",
-            window_type=WindowType.DYNAMIC(len_column_name="dynamic_len"),
+            window_types=WindowType.DYNAMIC(len_column_name="dynamic_len"),
         )
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
 
@@ -167,7 +167,7 @@ class TestMedian:
 
     def test_transform_dataset_with_nan(self, ts_dataset_with_nan):
         """Проверка transform с dataset, содержащим NaN значения."""
-        median_calculator = Median(columns="value", window_type=WindowType.EXPANDING())
+        median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(ts_dataset_with_nan)
 
         # Проверка, что новая колонка добавлена
@@ -180,7 +180,7 @@ class TestMedian:
 
     def test_transform_single_row_dataset(self, single_row_ts_dataset):
         """Проверка transform с dataset, содержащим одну строку."""
-        median_calculator = Median(columns="value", window_type=WindowType.EXPANDING())
+        median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(single_row_ts_dataset)
 
         # Проверка, что новая колонка добавлена
@@ -193,7 +193,7 @@ class TestMedian:
 
     def test_transform_multiple_columns(self, ts_dataset_multiple_columns):
         """Проверка transform с dataset, содержащим несколько колонок."""
-        median_calculator = Median(columns=["value1", "value2"], window_type=WindowType.EXPANDING())
+        median_calculator = Median(columns=["value1", "value2"], window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(ts_dataset_multiple_columns)
 
         # Проверка, что новые колонки добавлены
@@ -214,7 +214,7 @@ class TestMedian:
         """Проверка transform с window size, превышающим доступные данные."""
         median_calculator = Median(
             columns="value",
-            window_type=WindowType.ROLLING(size=10, only_full_window=True),
+            window_types=WindowType.ROLLING(size=10, only_full_window=True),
         )
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
 

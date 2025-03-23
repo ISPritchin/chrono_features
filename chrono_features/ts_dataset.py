@@ -30,7 +30,7 @@ class TSDataset:
         self.data = data
         self._sort()
 
-    def head(self, n):
+    def head(self, n=None):
         """
         Returns the first n rows of the dataset.
 
@@ -41,6 +41,18 @@ class TSDataset:
             pl.DataFrame: The first n rows of the dataset.
         """
         return self.data.head(n)
+
+    def tail(self, n=None):
+        """
+        Returns the last n rows of the dataset.
+
+        Args:
+            n (int): The number of rows to return.
+
+        Returns:
+            pl.DataFrame: The last n rows of the dataset.
+        """
+        return self.data.tail(n)
 
     @staticmethod
     @numba.njit

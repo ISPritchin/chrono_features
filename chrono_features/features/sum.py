@@ -1,7 +1,10 @@
 import numba
 import numpy as np
 
-from chrono_features.features._base import _FromNumbaFuncWithoutCalculatedForEachTS
+from chrono_features.features._base import (
+    _FromNumbaFuncWithoutCalculatedForEachTS,
+    _FromNumbaFuncWithoutCalculatedForEachTSPoint,
+)
 from chrono_features.window_type import WindowType
 
 
@@ -20,40 +23,43 @@ def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
 
 
 @numba.njit
-def process_dynamic(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
-    print(feature)
-    print(lens)
-
-    prefix_sum_array = np.empty(len(feature) + 1, dtype=np.float64)
-    prefix_sum_array[0] = 0
-    for i in range(len(feature)):
-        prefix_sum_array[i + 1] = prefix_sum_array[i] + feature[i]
-
+def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     result = np.empty(len(feature), dtype=np.float64)
-    for i in range(len(result)):
-        end = i + 1
-        start = end - lens[i]
-        if lens[i] == 0:
-            result[i] = np.nan
-        else:
-            result[i] = prefix_sum_array[end] - prefix_sum_array[start]
+
+    buffer_size = ts_lens.max() + 1
+    prefix_sum_array = np.empty(buffer_size, dtype=np.float64)
+
+    end = 0
+    for i in range(len(ts_lens)):
+        current_len = ts_lens[i]
+        start = end
+        end = start + current_len
+
+        prefix_sum_array[0] = 0
+        for j in range(start, end):
+            prefix_sum_array[j - start + 1] = prefix_sum_array[j - start] + feature[j]
+
+        for j in range(start, end):
+            v = j - start + 1
+            start_window = v - lens[j]
+            if lens[j] == 0:
+                result[j] = np.nan
+            else:
+                result[j] = prefix_sum_array[v] - prefix_sum_array[start_window]
 
     return result
 
 
 @numba.njit
-def process_rolling(
-    feature: np.ndarray,
-    lens: np.ndarray,
-) -> np.ndarray:
+def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """
     Optimized processing for rolling windows.
     If not implemented in a subclass, falls back to process_dynamic.
     """
-    return process_dynamic(feature, lens)
+    return process_dynamic(feature, lens, ts_lens)
 
 
-class Sum(_FromNumbaFuncWithoutCalculatedForEachTS):
+class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
     def __init__(
         self,
         columns: list[str] | str,
@@ -63,7 +69,6 @@ class Sum(_FromNumbaFuncWithoutCalculatedForEachTS):
         super().__init__(columns, window_type, out_column_names, func_name="sum")
 
     @staticmethod
-    @numba.njit
     def process_all_ts(
         feature: np.ndarray,
         ts_lens: np.ndarray,
@@ -84,29 +89,46 @@ class Sum(_FromNumbaFuncWithoutCalculatedForEachTS):
         Returns:
             np.ndarray: The result array.
         """
-        res = np.empty(len(feature), dtype=np.float64)
-        end = 0
-        for ts_len in ts_lens:
-            start = end
-            end += ts_len
-            window_data = feature[start:end]
-            window_lens = lens[start:end]
-
-            # Выбор метода в зависимости от типа окна
-            if window_type == 1:
-                res[start:end] = process_rolling(
-                    feature=window_data,
-                    lens=window_lens,
-                )
-            elif window_type == 0:
-                res[start:end] = process_expanding(
-                    feature=window_data,
-                    lens=window_lens,
-                )
-            else:
-                # Для dynamic и других типов окон используем универсальный метод
-                res[start:end] = process_dynamic(
-                    feature=window_data,
-                    lens=window_lens,
-                )
+        # Выбор метода в зависимости от типа окна
+        if window_type == 0:
+            res = process_expanding(
+                feature=feature,
+                lens=lens,
+            )
+        elif window_type == 1:
+            res = process_rolling(feature=feature, lens=lens, ts_lens=ts_lens)
+        elif window_type == 2:
+            # Для dynamic и других типов окон используем универсальный метод
+            res = process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
+        else:
+            raise ValueError
         return res
+
+
+class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
+    def __init__(
+        self,
+        columns: list[str] | str,
+        window_type: WindowType,
+        out_column_names: list[str] | str | None = None,
+    ):
+        super().__init__(columns, window_type, out_column_names, func_name="sum")
+
+    @staticmethod
+    @numba.njit
+    def _numba_func(xs: np.ndarray) -> np.ndarray:
+        return np.sum(xs)
+
+
+class Sum:
+    def __new__(
+        cls,
+        columns: list[str] | str,
+        window_types: WindowType,
+        out_column_names: list[str] | str | None = None,
+        use_prefix_sum_optimization: bool = False,
+    ):
+        if use_prefix_sum_optimization:
+            return SumWithPrefixSumOptimization(columns, window_types, out_column_names)
+        else:
+            return SumWithoutOptimization(columns, window_types, out_column_names)

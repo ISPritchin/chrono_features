@@ -22,4 +22,7 @@ keywords = ["timeseries", "features"]
 line-length = 120
 
 [tool.pytest.ini_options]
-addopts = "-v --testmon"
+markers = [
+    "performance: for compare several implementations"
+]
+addopts = "-v --testmon --strict-markers"

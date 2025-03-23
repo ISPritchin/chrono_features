@@ -9,10 +9,15 @@ class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="median")
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+            func_name="median",
+        )
 
     @staticmethod
     @numba.njit

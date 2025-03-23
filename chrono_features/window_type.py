@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from enum import Enum
 
 
 class WindowBase(ABC):
@@ -13,11 +12,31 @@ class WindowBase(ABC):
         Returns:
             str: A string representing the window type suffix.
         """
-        pass
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def get_enum_value(self):
+        raise NotImplementedError
 
 
 class WindowType:
     """Class containing various types of windows."""
+
+    class EXPANDING(WindowBase):
+        """An expanding window."""
+
+        @property
+        def suffix(self) -> str:
+            """Returns the suffix for the EXPANDING window.
+
+            Returns:
+                str: A string representing the window type suffix.
+            """
+            return "expanding"
+
+        def get_enum_value(self):
+            return 0
 
     class ROLLING(WindowBase):
         """A window with a fixed size."""
@@ -41,6 +60,9 @@ class WindowType:
             """
             return f"rolling_{self.size}"
 
+        def get_enum_value(self):
+            return 1
+
     class DYNAMIC(WindowBase):
         """A window with a dynamic size based on a column."""
 
@@ -61,22 +83,5 @@ class WindowType:
             """
             return f"dynamic_based_on_{self.len_column_name}"
 
-    class EXPANDING(WindowBase):
-        """An expanding window."""
-
-        @property
-        def suffix(self) -> str:
-            """Returns the suffix for the EXPANDING window.
-
-            Returns:
-                str: A string representing the window type suffix.
-            """
-            return "expanding"
-
-
-class WindowTypeEnum(Enum):
-    """Enum for window types."""
-
-    EXPANDING = 0
-    ROLLING = 1
-    DYNAMIC = 2
+        def get_enum_value(self):
+            return 2

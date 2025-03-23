@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from itertools import product
 from typing import Callable
 
 import numba
@@ -6,7 +7,7 @@ import numpy as np
 import polars as pl
 
 from chrono_features.ts_dataset import TSDataset
-from chrono_features.window_type import WindowType, WindowBase, WindowTypeEnum
+from chrono_features.window_type import WindowType, WindowBase
 
 
 @numba.jit(nopython=True)
@@ -21,9 +22,9 @@ def _calculate_expanding_window_length(ids: np.ndarray) -> np.ndarray:
     return lens
 
 
-@numba.jit(nopython=True)
+@numba.njit
 def _calculate_rolling_window_length(ids: np.ndarray, window_size: int, only_full_window: bool) -> np.ndarray:
-    lens = np.empty(len(ids), dtype=np.int32)
+    lens = np.zeros(len(ids), dtype=np.int32)
     lens[0] = 1
     for i in range(1, len(lens)):
         if ids[i] == ids[i - 1]:
@@ -65,11 +66,13 @@ def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.
 
     # Calculate window lengths based on the window type
     if isinstance(window_type, WindowType.EXPANDING):
-        return _calculate_expanding_window_length(ids)
+        res = _calculate_expanding_window_length(ids)
     elif isinstance(window_type, WindowType.ROLLING):
-        return _calculate_rolling_window_length(ids, window_type.size, window_type.only_full_window)
+        res = _calculate_rolling_window_length(ids, window_type.size, window_type.only_full_window)
     else:
         raise ValueError(f"Unsupported window type: {window_type}")
+
+    return res
 
 
 @numba.njit
@@ -78,7 +81,6 @@ def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
     current_id_index = 0
     current_len = 1
     for i in range(1, len(ids)):
-        print(ts_lens)
         if ids[i] != ids[i - 1]:
             ts_lens[current_id_index] = current_len
             current_id_index += 1
@@ -86,23 +88,29 @@ def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
         else:
             current_len += 1
     ts_lens[current_id_index] = current_len
-    print(ts_lens)
     return ts_lens[: current_id_index + 1]
 
 
 class FeatureGenerator(ABC):
-    def __init__(self, columns: list[str] | str, window_type: WindowType, out_column_name=None):
+    def __init__(self, columns: list[str] | str, window_types: WindowType, out_column_names=None):
         if isinstance(columns, str):
             columns = [columns]
         if not isinstance(columns, list) or not len(columns):
             raise ValueError
 
-        if not isinstance(window_type, WindowBase):
+        if isinstance(window_types, WindowBase):
+            window_types = [window_types]
+        if not isinstance(window_types, list) or not len(window_types):
+            raise ValueError
+
+        if isinstance(out_column_names, str):
+            out_column_names = [out_column_names]
+        if out_column_names is not None and len(columns) * len(window_types) != len(out_column_names):
             raise ValueError
 
         self.columns = columns
-        self.window_type = window_type
-        self.out_column_name = out_column_name
+        self.window_types = window_types
+        self.out_column_names = out_column_names
 
     @abstractmethod
     def transform(self, dataset: TSDataset) -> np.ndarray:
@@ -118,7 +126,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         func_name: str = None,
     ):
@@ -131,23 +139,17 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
             out_column_names (Union[List[str], str, None]): The names of the output columns.
             func_name (str): The name of the function (used to generate output column names if not provided).
         """
-        super().__init__(columns, window_type, out_column_names)
-
-        # Convert columns to a list if a single string is provided
-        if isinstance(columns, str):
-            self.columns = [columns]
-        else:
-            self.columns = columns
+        super().__init__(columns, window_types, out_column_names)
 
         # Generate out_column_names if not provided
-        if out_column_names is None:
+        if self.out_column_names is None:
             if func_name is None:
                 raise ValueError("func_name must be provided if out_column_names is None")
-            self.out_column_names = [f"{column}_{func_name}_{window_type.suffix}" for column in self.columns]
-        elif isinstance(out_column_names, str):
-            self.out_column_names = [out_column_names]
-        else:
-            self.out_column_names = out_column_names
+            self.out_column_names = [
+                f"{column}_{func_name}_{window_type.suffix}"
+                for column in self.columns
+                for window_type in self.window_types
+            ]
 
     @staticmethod
     @numba.njit
@@ -201,16 +203,17 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         if len(self.columns) != len(self.out_column_names):
             raise ValueError("The number of columns and output column names must match.")
 
-        for column, out_column_name in zip(self.columns, self.out_column_names):
+        for (column, window_type), out_column_name in zip(
+            product(self.columns, self.window_types), self.out_column_names, strict=True
+        ):
             if column not in dataset.data.columns:
                 raise ValueError(f"Column '{column}' not found in the dataset.")
 
             # Calculate window lengths
             lens = calculate_window_lengths(
                 dataset=dataset,
-                window_type=self.window_type,
+                window_type=window_type,
             )
-            print(lens)
 
             # Apply the function to the feature array
             feature_array = dataset.data[column].to_numpy()
@@ -226,7 +229,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         func_name: str = "sum",
     ):
@@ -242,35 +245,20 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         Raises:
             ValueError: If an unsupported window type is provided.
         """
-        super().__init__(columns, window_type, out_column_names)
+        super().__init__(columns, window_types, out_column_names)
 
-        # Convert columns to a list if a single string is provided
-        if isinstance(columns, str):
-            self.columns = [columns]
-        else:
-            self.columns = columns
-
-        # Generate out_column_names if not provided
         if out_column_names is None:
             if func_name is None:
                 raise ValueError("func_name must be provided if out_column_names is None")
-            self.out_column_names = [f"{column}_{func_name}_{window_type.suffix}" for column in self.columns]
+            self.out_column_names = [
+                f"{column}_{func_name}_{window_type.suffix}"
+                for column in self.columns
+                for window_type in self.window_types
+            ]
         elif isinstance(out_column_names, str):
             self.out_column_names = [out_column_names]
         else:
             self.out_column_names = out_column_names
-
-        # Map WindowType to WindowTypeEnum
-        if isinstance(window_type, WindowType.ROLLING):
-            self.window_type_enum = WindowTypeEnum.ROLLING
-            self.window_size = window_type.size
-            self.only_full_window = window_type.only_full_window
-        elif isinstance(window_type, WindowType.EXPANDING):
-            self.window_type_enum = WindowTypeEnum.EXPANDING
-        elif isinstance(window_type, WindowType.DYNAMIC):
-            self.window_type_enum = WindowTypeEnum.DYNAMIC
-        else:
-            raise ValueError(f"Unsupported window type: {window_type}")
 
     def transform(self, dataset: TSDataset) -> TSDataset:
         """
@@ -285,29 +273,31 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         if not self.columns:
             raise ValueError("No columns specified for transformation.")
 
-        if len(self.columns) != len(self.out_column_names):
-            raise ValueError("The number of columns and output column names must match.")
+        if len(self.columns) * len(self.window_types) != len(self.out_column_names):
+            raise ValueError
 
-        for column, out_column_name in zip(self.columns, self.out_column_names):
+        for (column, window_type), out_column_name in zip(
+            product(self.columns, self.window_types), self.out_column_names
+        ):
             if column not in dataset.data.columns:
                 raise ValueError(f"Column '{column}' not found in the dataset.")
 
             # Calculate window lengths
             lens = calculate_window_lengths(
                 dataset=dataset,
-                window_type=self.window_type,
+                window_type=window_type,
             )
 
             # Apply the function to the feature array
             feature_array = dataset.data[column].to_numpy()
+
             ts_lens = calculate_length_for_each_time_series(dataset._get_numeric_id_column_values())
-            print(ts_lens)
 
             result_array = self.process_all_ts(
                 feature=feature_array,
-                ts_lens=ts_lens,
                 lens=lens,
-                window_type=self.window_type_enum.value,  # Pass int representation
+                ts_lens=ts_lens,
+                window_type=window_type.get_enum_value(),  # Pass int representation
             )
 
             # Add the result as a new column to the dataset
@@ -319,8 +309,8 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
     @numba.njit
     def process_all_ts(
         feature: np.ndarray,
-        ts_lens: np.ndarray,
         lens: np.ndarray,
+        ts_lens: np.ndarray,
         window_type: int,
     ):
         raise NotImplementedError
