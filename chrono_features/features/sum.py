@@ -5,7 +5,7 @@ from chrono_features.features._base import (
     _FromNumbaFuncWithoutCalculatedForEachTS,
     _FromNumbaFuncWithoutCalculatedForEachTSPoint,
 )
-from chrono_features.window_type import WindowType
+from chrono_features.window_type import WindowType, WindowBase
 
 
 @numba.njit
@@ -63,17 +63,17 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[str] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="sum")
+        super().__init__(columns, window_types, out_column_names, func_name="sum")
 
     @staticmethod
     def process_all_ts(
         feature: np.ndarray,
         ts_lens: np.ndarray,
         lens: np.ndarray,
-        window_type: int,  # int representation of WindowTypeEnum
+        window_type: WindowBase,  # int representation of WindowTypeEnum
     ) -> np.ndarray:
         """
         Process all time series using the appropriate method based on window type.
@@ -90,41 +90,48 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
             np.ndarray: The result array.
         """
         # Выбор метода в зависимости от типа окна
-        if window_type == 0:
-            res = process_expanding(
+        if isinstance(window_type, WindowType.EXPANDING):
+            return process_expanding(
                 feature=feature,
                 lens=lens,
             )
-        elif window_type == 1:
-            res = process_rolling(feature=feature, lens=lens, ts_lens=ts_lens)
-        elif window_type == 2:
+        if isinstance(window_type, WindowType.ROLLING):
+            return process_rolling(feature=feature, lens=lens, ts_lens=ts_lens)
+        if isinstance(window_type, WindowType.DYNAMIC):
             # Для dynamic и других типов окон используем универсальный метод
-            res = process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
-        else:
-            raise ValueError
-        return res
+            return process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
+
+        raise ValueError
 
 
 class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="sum")
+        super().__init__(columns, window_types, out_column_names, func_name="sum")
 
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         return np.sum(xs)
 
+    def transform_for_window_type(self, dataset, column, window_type):
+        if not isinstance(window_type, WindowType.EXPANDING):
+            return super().transform_for_window_type(dataset, column, window_type)
+        else:
+            return SumWithPrefixSumOptimization(
+                columns=column, window_types=window_type, out_column_names=None
+            ).transform_for_window_type(dataset, column, window_type=window_type)
+
 
 class Sum:
     def __new__(
         cls,
         columns: list[str] | str,
-        window_types: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         use_prefix_sum_optimization: bool = False,
     ):

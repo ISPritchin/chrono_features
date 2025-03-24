@@ -8,7 +8,7 @@ from chrono_features.ts_dataset import TSDataset
 
 
 @pytest.fixture
-def large_dataset(n_ids=500, n_timestamps=100):
+def large_dataset(n_ids=50, n_timestamps=1000000):
     # Create a large dataset for performance testing
     ids = np.repeat(range(n_ids), n_timestamps)
     timestamps = np.tile(np.arange(1, n_timestamps + 1), n_ids)

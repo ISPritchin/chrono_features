@@ -117,9 +117,10 @@ def test_sum_custom_out_column_names(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_multiple_window_types(sample_dataset):
+@pytest.mark.parametrize("use_prefix_sum_optimization", [True, False])
+def test_sum_multiple_window_types(sample_dataset, use_prefix_sum_optimization):
     sum_transformer = Sum(
-        use_prefix_sum_optimization=True,
+        use_prefix_sum_optimization=use_prefix_sum_optimization,
         columns="value",
         window_types=[WindowType.EXPANDING(), WindowType.ROLLING(size=2)],
     )

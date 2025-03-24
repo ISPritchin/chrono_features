@@ -112,8 +112,37 @@ class FeatureGenerator(ABC):
         self.window_types = window_types
         self.out_column_names = out_column_names
 
-    @abstractmethod
     def transform(self, dataset: TSDataset) -> np.ndarray:
+        if not self.columns:
+            raise ValueError("No columns specified for transformation.")
+
+        if len(self.columns) * len(self.window_types) != len(self.out_column_names):
+            raise ValueError("The number of columns and output column names must match.")
+
+        for (column, window_type), out_column_name in zip(
+            product(self.columns, self.window_types), self.out_column_names, strict=True
+        ):
+            if column not in dataset.data.columns:
+                raise ValueError(f"Column '{column}' not found in the dataset.")
+
+            result_array = self.transform_for_window_type(
+                dataset,
+                column=column,
+                window_type=window_type,
+            )
+
+            # Add the result as a new column to the dataset
+            dataset.data = dataset.data.with_columns(pl.Series(result_array).alias(out_column_name))
+
+        return dataset
+
+    @abstractmethod
+    def transform_for_window_type(
+        self,
+        dataset: TSDataset,
+        column: str,
+        window_type: WindowBase,
+    ):
         raise NotImplementedError
 
 
@@ -187,42 +216,22 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         """
         raise NotImplementedError
 
-    def transform(self, dataset: TSDataset) -> TSDataset:
-        """
-        Applies the Numba-compiled function to each column in the dataset.
+    def transform_for_window_type(
+        self,
+        dataset: TSDataset,
+        column: str,
+        window_type: WindowBase,
+    ):
+        lens = calculate_window_lengths(
+            dataset=dataset,
+            window_type=window_type,
+        )
 
-        Args:
-            dataset (TSDataset): The input dataset.
+        # Apply the function to the feature array
+        feature_array = dataset.data[column].to_numpy()
+        result_array = self.apply_func_to_full_window(feature_array, self._numba_func, lens)
 
-        Returns:
-            TSDataset: The transformed dataset with new columns added.
-        """
-        if not self.columns:
-            raise ValueError("No columns specified for transformation.")
-
-        if len(self.columns) * len(self.window_types) != len(self.out_column_names):
-            raise ValueError("The number of columns and output column names must match.")
-
-        for (column, window_type), out_column_name in zip(
-            product(self.columns, self.window_types), self.out_column_names, strict=True
-        ):
-            if column not in dataset.data.columns:
-                raise ValueError(f"Column '{column}' not found in the dataset.")
-
-            # Calculate window lengths
-            lens = calculate_window_lengths(
-                dataset=dataset,
-                window_type=window_type,
-            )
-
-            # Apply the function to the feature array
-            feature_array = dataset.data[column].to_numpy()
-            result_array = self.apply_func_to_full_window(feature_array, self._numba_func, lens)
-
-            # Add the result as a new column to the dataset
-            dataset.data = dataset.data.with_columns(pl.Series(result_array).alias(out_column_name))
-
-        return dataset
+        return result_array
 
 
 class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
@@ -260,50 +269,23 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         else:
             self.out_column_names = out_column_names
 
-    def transform(self, dataset: TSDataset) -> TSDataset:
-        """
-        Applies the Numba-compiled function to each column in the dataset.
+    def transform_for_window_type(self, dataset, column, window_type):
+        lens = calculate_window_lengths(
+            dataset=dataset,
+            window_type=window_type,
+        )
 
-        Args:
-            dataset (TSDataset): The input dataset.
+        # Apply the function to the feature array
+        feature_array = dataset.data[column].to_numpy()
 
-        Returns:
-            TSDataset: The transformed dataset with new columns added.
-        """
-        if not self.columns:
-            raise ValueError("No columns specified for transformation.")
+        ts_lens = calculate_length_for_each_time_series(dataset._get_numeric_id_column_values())
 
-        if len(self.columns) * len(self.window_types) != len(self.out_column_names):
-            raise ValueError
-
-        for (column, window_type), out_column_name in zip(
-            product(self.columns, self.window_types), self.out_column_names
-        ):
-            if column not in dataset.data.columns:
-                raise ValueError(f"Column '{column}' not found in the dataset.")
-
-            # Calculate window lengths
-            lens = calculate_window_lengths(
-                dataset=dataset,
-                window_type=window_type,
-            )
-
-            # Apply the function to the feature array
-            feature_array = dataset.data[column].to_numpy()
-
-            ts_lens = calculate_length_for_each_time_series(dataset._get_numeric_id_column_values())
-
-            result_array = self.process_all_ts(
-                feature=feature_array,
-                lens=lens,
-                ts_lens=ts_lens,
-                window_type=window_type.get_enum_value(),  # Pass int representation
-            )
-
-            # Add the result as a new column to the dataset
-            dataset.data = dataset.data.with_columns(pl.Series(result_array).alias(out_column_name))
-
-        return dataset
+        return self.process_all_ts(
+            feature=feature_array,
+            lens=lens,
+            ts_lens=ts_lens,
+            window_type=window_type,  # Pass int representation
+        )
 
     @staticmethod
     @numba.njit
@@ -311,6 +293,6 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         feature: np.ndarray,
         lens: np.ndarray,
         ts_lens: np.ndarray,
-        window_type: int,
+        window_type: WindowBase,
     ):
         raise NotImplementedError

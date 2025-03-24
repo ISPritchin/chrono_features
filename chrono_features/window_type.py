@@ -14,11 +14,6 @@ class WindowBase(ABC):
         """
         raise NotImplementedError
 
-    @property
-    @abstractmethod
-    def get_enum_value(self):
-        raise NotImplementedError
-
 
 class WindowType:
     """Class containing various types of windows."""
@@ -34,9 +29,6 @@ class WindowType:
                 str: A string representing the window type suffix.
             """
             return "expanding"
-
-        def get_enum_value(self):
-            return 0
 
     class ROLLING(WindowBase):
         """A window with a fixed size."""
@@ -60,9 +52,6 @@ class WindowType:
             """
             return f"rolling_{self.size}"
 
-        def get_enum_value(self):
-            return 1
-
     class DYNAMIC(WindowBase):
         """A window with a dynamic size based on a column."""
 
@@ -82,6 +71,3 @@ class WindowType:
                 str: A string representing the window type suffix.
             """
             return f"dynamic_based_on_{self.len_column_name}"
-
-        def get_enum_value(self):
-            return 2
