@@ -173,5 +173,7 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# tests
+# other
 .testmondata*
+.DS_Store
+launch.json

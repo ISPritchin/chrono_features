@@ -18,7 +18,8 @@
         "**/.coverage": true,
         "**/.DS_Store": true,
         "**/__pycache__": true,
-        "**/*.pyc": true
+        "**/*.pyc": true,
+        ".testmondata*": true,
     },
     "files.watcherExclude": {
         "**/.git/objects/**": true,
