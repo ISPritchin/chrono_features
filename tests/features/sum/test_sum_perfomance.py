@@ -8,7 +8,7 @@ from chrono_features.ts_dataset import TSDataset
 
 
 @pytest.fixture
-def large_dataset(n_ids=50, n_timestamps=1000000):
+def large_dataset(n_ids=50, n_timestamps=1000000) -> TSDataset:
     # Create a large dataset for performance testing
     ids = np.repeat(range(n_ids), n_timestamps)
     timestamps = np.tile(np.arange(1, n_timestamps + 1), n_ids)
@@ -24,7 +24,7 @@ def large_dataset(n_ids=50, n_timestamps=1000000):
 
 
 @pytest.mark.performance
-def test_performance_comparison(large_dataset):
+def test_performance_comparison(large_dataset: TSDataset) -> None:
     # window_size = 50
     # Test the method with optimization
     # Test the method without optimization

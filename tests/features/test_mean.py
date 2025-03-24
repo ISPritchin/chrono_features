@@ -2,13 +2,13 @@ import pytest
 import numpy as np
 import polars as pl
 from chrono_features.ts_dataset import TSDataset
-from chrono_features.window_type import WindowType
+from chrono_features.window_type import WindowBase, WindowType
 from chrono_features.features.mean import Mean
 
 
 # Fixtures
 @pytest.fixture
-def sample_ts_dataset():
+def sample_ts_dataset() -> TSDataset:
     """Fixture to create a sample TSDataset for testing."""
     data = pl.DataFrame(
         data={
@@ -21,7 +21,7 @@ def sample_ts_dataset():
 
 
 @pytest.fixture
-def sample_window_types():
+def sample_window_types() -> dict[str, WindowBase]:
     """Fixture to provide various window types for testing."""
     return {
         "expanding": WindowType.EXPANDING(),
@@ -34,7 +34,7 @@ def sample_window_types():
 class TestMeanNumbaLevel:
     """Tests for the Mean class."""
 
-    def test_initialization(self, sample_window_types):
+    def test_initialization(self, sample_window_types: dict[str, WindowBase]) -> None:
         """Test that Mean initializes correctly with default and custom out_column_name."""
         # Test with default out_column_name
         mean_default = Mean(columns="value", window_types=sample_window_types["expanding"])
@@ -48,7 +48,7 @@ class TestMeanNumbaLevel:
         )
         assert mean_custom.out_column_names == ["custom_mean"]
 
-    def test_numba_func(self):
+    def test_numba_func(self) -> None:
         """Test that _numba_func correctly calculates the mean of an array."""
         mean_calculator = Mean(columns="value", window_types=WindowType.EXPANDING())
         test_array = np.array([1, 2, 3, 4, 5], dtype=np.float32)
@@ -56,7 +56,7 @@ class TestMeanNumbaLevel:
         result = mean_calculator._numba_func(test_array)
         assert np.isclose(result, expected_mean)
 
-    def test_transform_expanding_window(self, sample_ts_dataset):
+    def test_transform_expanding_window(self, sample_ts_dataset: TSDataset) -> None:
         """Test the transform method with an expanding window."""
         mean_calculator = Mean(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = mean_calculator.transform(sample_ts_dataset)
@@ -69,7 +69,7 @@ class TestMeanNumbaLevel:
         result_means = transformed_dataset.data["value_mean_expanding"].to_numpy()
         assert np.allclose(result_means, expected_means)
 
-    def test_transform_rolling_window_full(self, sample_ts_dataset):
+    def test_transform_rolling_window_full(self, sample_ts_dataset: TSDataset) -> None:
         """Test the transform method with a rolling window (only_full_window=True)."""
         mean_calculator = Mean(
             columns="value",
@@ -85,7 +85,7 @@ class TestMeanNumbaLevel:
         result_means = transformed_dataset.data["value_mean_rolling_2"].to_numpy()
         assert np.allclose(result_means, expected_means, equal_nan=True)
 
-    def test_transform_rolling_window_partial(self, sample_ts_dataset):
+    def test_transform_rolling_window_partial(self, sample_ts_dataset: TSDataset) -> None:
         """Test the transform method with a rolling window (only_full_window=False)."""
         mean_calculator = Mean(
             columns="value",
@@ -101,7 +101,7 @@ class TestMeanNumbaLevel:
         result_means = transformed_dataset.data["value_mean_rolling_2"].to_numpy()
         assert np.allclose(result_means, expected_means)
 
-    def test_transform_dynamic_window(self, sample_ts_dataset):
+    def test_transform_dynamic_window(self, sample_ts_dataset: TSDataset) -> None:
         """Test the transform method with a dynamic window."""
         # Add a dynamic length column to the dataset
         sample_ts_dataset.data = sample_ts_dataset.data.with_columns(pl.Series("dynamic_len", [1, 2, 1, 1, 2, 1]))
@@ -121,21 +121,21 @@ class TestMeanNumbaLevel:
 
 
 @pytest.fixture
-def empty_ts_dataset():
+def empty_ts_dataset() -> TSDataset:
     """Fixture to create an empty TSDataset for testing."""
     data = pl.DataFrame({"id": [], "timestamp": [], "value": []})
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
-def single_row_ts_dataset():
+def single_row_ts_dataset() -> TSDataset:
     """Fixture to create a TSDataset with a single row for testing."""
     data = pl.DataFrame({"id": [1], "timestamp": [1], "value": [10]})
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
-def ts_dataset_with_nan():
+def ts_dataset_with_nan() -> TSDataset:
     """Fixture to create a TSDataset with NaN values for testing."""
     data = pl.DataFrame(
         data={
@@ -148,7 +148,7 @@ def ts_dataset_with_nan():
 
 
 @pytest.fixture
-def ts_dataset_multiple_columns():
+def ts_dataset_multiple_columns() -> TSDataset:
     """Fixture to create a TSDataset with multiple columns for testing."""
     data = pl.DataFrame(
         data={
@@ -165,7 +165,7 @@ def ts_dataset_multiple_columns():
 class TestMean:
     """Tests for the Mean class."""
 
-    def test_transform_dataset_with_nan(self, ts_dataset_with_nan):
+    def test_transform_dataset_with_nan(self, ts_dataset_with_nan: TSDataset) -> None:
         """Test the transform method with a dataset containing NaN values."""
         mean_calculator = Mean(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = mean_calculator.transform(ts_dataset_with_nan)
@@ -179,7 +179,7 @@ class TestMean:
 
         assert np.allclose(result_means, expected_means, equal_nan=True)
 
-    def test_transform_single_row_dataset(self, single_row_ts_dataset):
+    def test_transform_single_row_dataset(self, single_row_ts_dataset: TSDataset) -> None:
         """Test the transform method with a dataset containing a single row."""
         mean_calculator = Mean(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = mean_calculator.transform(single_row_ts_dataset)
@@ -192,7 +192,7 @@ class TestMean:
         result_means = transformed_dataset.data["value_mean_expanding"].to_numpy()
         assert np.allclose(result_means, expected_means)
 
-    def test_transform_multiple_columns(self, ts_dataset_multiple_columns):
+    def test_transform_multiple_columns(self, ts_dataset_multiple_columns: TSDataset) -> None:
         """Test the transform method with a dataset containing multiple columns."""
         mean_calculator = Mean(columns=["value1", "value2"], window_types=WindowType.EXPANDING())
         transformed_dataset = mean_calculator.transform(ts_dataset_multiple_columns)
@@ -211,7 +211,7 @@ class TestMean:
             result_means = transformed_dataset.data[column].to_numpy()
             assert np.allclose(result_means, expected)
 
-    def test_transform_large_window_size(self, sample_ts_dataset):
+    def test_transform_large_window_size(self, sample_ts_dataset: TSDataset) -> None:
         """Test the transform method with a window size larger than the available data."""
         mean_calculator = Mean(
             columns="value",

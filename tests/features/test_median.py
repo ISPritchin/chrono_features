@@ -2,13 +2,13 @@ import pytest
 import numpy as np
 import polars as pl
 from chrono_features.ts_dataset import TSDataset
-from chrono_features.window_type import WindowType
+from chrono_features.window_type import WindowBase, WindowType
 from chrono_features.features.median import Median  # Импортируем новый класс
 
 
 # Фикстуры
 @pytest.fixture
-def sample_ts_dataset():
+def sample_ts_dataset() -> TSDataset:
     """Фикстура для создания тестового TSDataset."""
     data = pl.DataFrame(
         data={
@@ -21,7 +21,7 @@ def sample_ts_dataset():
 
 
 @pytest.fixture
-def sample_window_types():
+def sample_window_types() -> dict[str, WindowBase]:
     """Фикстура для предоставления различных типов окон."""
     return {
         "expanding": WindowType.EXPANDING(),
@@ -34,7 +34,7 @@ def sample_window_types():
 class TestMedianNumbaLevel:
     """Тесты для класса Median."""
 
-    def test_initialization(self, sample_window_types):
+    def test_initialization(self, sample_window_types: dict[str, WindowBase]) -> None:
         """Проверка инициализации Median с default и custom out_column_name."""
         # Тест с default out_column_name
         median_default = Median(columns="value", window_types=sample_window_types["expanding"])
@@ -48,7 +48,7 @@ class TestMedianNumbaLevel:
         )
         assert median_custom.out_column_names == ["custom_median"]
 
-    def test_numba_func(self):
+    def test_numba_func(self) -> None:
         """Проверка, что _numba_func корректно вычисляет медиану массива."""
         median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         test_array = np.array([1, 2, 3, 4, 5], dtype=np.float32)
@@ -56,7 +56,7 @@ class TestMedianNumbaLevel:
         result = median_calculator._numba_func(test_array)
         assert np.isclose(result, expected_median)
 
-    def test_transform_expanding_window(self, sample_ts_dataset):
+    def test_transform_expanding_window(self, sample_ts_dataset: TSDataset) -> None:
         """Проверка transform с expanding window."""
         median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(sample_ts_dataset)
@@ -69,7 +69,7 @@ class TestMedianNumbaLevel:
         result_medians = transformed_dataset.data["value_median_expanding"].to_numpy()
         assert np.allclose(result_medians, expected_medians)
 
-    def test_transform_rolling_window_full(self, sample_ts_dataset):
+    def test_transform_rolling_window_full(self, sample_ts_dataset: TSDataset) -> None:
         """Проверка transform с rolling window (only_full_window=True)."""
         median_calculator = Median(
             columns="value",
@@ -85,7 +85,7 @@ class TestMedianNumbaLevel:
         result_medians = transformed_dataset.data["value_median_rolling_2"].to_numpy()
         assert np.allclose(result_medians, expected_medians, equal_nan=True)
 
-    def test_transform_rolling_window_partial(self, sample_ts_dataset):
+    def test_transform_rolling_window_partial(self, sample_ts_dataset: TSDataset) -> None:
         """Проверка transform с rolling window (only_full_window=False)."""
         median_calculator = Median(
             columns="value",
@@ -101,7 +101,7 @@ class TestMedianNumbaLevel:
         result_medians = transformed_dataset.data["value_median_rolling_2"].to_numpy()
         assert np.allclose(result_medians, expected_medians)
 
-    def test_transform_dynamic_window(self, sample_ts_dataset):
+    def test_transform_dynamic_window(self, sample_ts_dataset: TSDataset) -> None:
         """Проверка transform с dynamic window."""
         # Добавляем колонку dynamic_len
         sample_ts_dataset.data = sample_ts_dataset.data.with_columns(pl.Series("dynamic_len", [1, 2, 1, 1, 2, 1]))
@@ -122,21 +122,21 @@ class TestMedianNumbaLevel:
 
 # Остальные фикстуры и тесты остаются без изменений, только заменяем Mean на Median
 @pytest.fixture
-def empty_ts_dataset():
+def empty_ts_dataset() -> TSDataset:
     """Фикстура для создания пустого TSDataset."""
     data = pl.DataFrame({"id": [], "timestamp": [], "value": []})
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
-def single_row_ts_dataset():
+def single_row_ts_dataset() -> TSDataset:
     """Фикстура для создания TSDataset с одной строкой."""
     data = pl.DataFrame({"id": [1], "timestamp": [1], "value": [10]})
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
-def ts_dataset_with_nan():
+def ts_dataset_with_nan() -> TSDataset:
     """Фикстура для создания TSDataset с NaN значениями."""
     data = pl.DataFrame(
         data={
@@ -149,7 +149,7 @@ def ts_dataset_with_nan():
 
 
 @pytest.fixture
-def ts_dataset_multiple_columns():
+def ts_dataset_multiple_columns() -> TSDataset:
     """Фикстура для создания TSDataset с несколькими колонками."""
     data = pl.DataFrame(
         data={
@@ -165,7 +165,7 @@ def ts_dataset_multiple_columns():
 class TestMedian:
     """Тесты для класса Median."""
 
-    def test_transform_dataset_with_nan(self, ts_dataset_with_nan):
+    def test_transform_dataset_with_nan(self, ts_dataset_with_nan: TSDataset) -> None:
         """Проверка transform с dataset, содержащим NaN значения."""
         median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(ts_dataset_with_nan)
@@ -178,7 +178,7 @@ class TestMedian:
         result_medians = transformed_dataset.data["value_median_expanding"].to_numpy()
         assert np.allclose(result_medians, expected_medians, equal_nan=True)
 
-    def test_transform_single_row_dataset(self, single_row_ts_dataset):
+    def test_transform_single_row_dataset(self, single_row_ts_dataset: TSDataset) -> None:
         """Проверка transform с dataset, содержащим одну строку."""
         median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(single_row_ts_dataset)
@@ -191,7 +191,7 @@ class TestMedian:
         result_medians = transformed_dataset.data["value_median_expanding"].to_numpy()
         assert np.allclose(result_medians, expected_medians)
 
-    def test_transform_multiple_columns(self, ts_dataset_multiple_columns):
+    def test_transform_multiple_columns(self, ts_dataset_multiple_columns: TSDataset) -> None:
         """Проверка transform с dataset, содержащим несколько колонок."""
         median_calculator = Median(columns=["value1", "value2"], window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(ts_dataset_multiple_columns)
@@ -210,7 +210,7 @@ class TestMedian:
             result_medians = transformed_dataset.data[column].to_numpy()
             assert np.allclose(result_medians, expected)
 
-    def test_transform_large_window_size(self, sample_ts_dataset):
+    def test_transform_large_window_size(self, sample_ts_dataset: TSDataset) -> None:
         """Проверка transform с window size, превышающим доступные данные."""
         median_calculator = Median(
             columns="value",

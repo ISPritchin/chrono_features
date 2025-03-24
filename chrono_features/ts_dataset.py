@@ -30,7 +30,7 @@ class TSDataset:
         self.data = data
         self._sort()
 
-    def head(self, n=None):
+    def head(self, n=None) -> pl.DataFrame:
         """
         Returns the first n rows of the dataset.
 
@@ -40,9 +40,9 @@ class TSDataset:
         Returns:
             pl.DataFrame: The first n rows of the dataset.
         """
-        return self.data.head(n)
+        return self.data.head(n=n)
 
-    def tail(self, n=None):
+    def tail(self, n=None) -> pl.DataFrame:
         """
         Returns the last n rows of the dataset.
 
@@ -52,7 +52,7 @@ class TSDataset:
         Returns:
             pl.DataFrame: The last n rows of the dataset.
         """
-        return self.data.tail(n)
+        return self.data.tail(n=n)
 
     @staticmethod
     @numba.njit
@@ -82,7 +82,7 @@ class TSDataset:
             n_blocks += values[i] != values[i - 1]
         return n_unique == n_blocks
 
-    def _sort(self):
+    def _sort(self) -> None:
         """
         Sorts the dataset by the identifier and timestamp columns.
 
@@ -105,7 +105,7 @@ class TSDataset:
         if not is_sorted_id_column or not is_sorted_ts_columns:
             self.data = self.data.sort([self.id_column_name, self.ts_column_name])
 
-    def add_feature(self, name: str, values):
+    def add_feature(self, name: str, values) -> None:
         """
         Adds a new feature (column) to the dataset.
 

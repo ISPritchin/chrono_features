@@ -8,7 +8,7 @@ from chrono_features.window_type import WindowType
 
 
 @pytest.fixture
-def sample_dataset():
+def sample_dataset() -> TSDataset:
     """Test dataset fixture with sample time series data."""
     data = pl.DataFrame(
         {
@@ -20,7 +20,7 @@ def sample_dataset():
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
 
-def test_absolute_sum_of_changes_expanding(sample_dataset):
+def test_absolute_sum_of_changes_expanding(sample_dataset: TSDataset) -> None:
     """Test expanding window calculation of absolute sum of changes."""
     transformer = AbsoluteSumOfChanges(
         columns="value",
@@ -37,7 +37,7 @@ def test_absolute_sum_of_changes_expanding(sample_dataset):
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
-def test_absolute_sum_of_changes_rolling(sample_dataset):
+def test_absolute_sum_of_changes_rolling(sample_dataset: TSDataset) -> None:
     """Test rolling window calculation of absolute sum of changes."""
     transformer = AbsoluteSumOfChanges(
         columns="value",
@@ -54,7 +54,7 @@ def test_absolute_sum_of_changes_rolling(sample_dataset):
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
-def test_absolute_sum_of_changes_dynamic(sample_dataset):
+def test_absolute_sum_of_changes_dynamic(sample_dataset: TSDataset) -> None:
     """Test dynamic window calculation of absolute sum of changes."""
     # Add window length column
     sample_dataset.add_feature("window_len", [1, 2, 2, 1, 2, 2])
@@ -80,7 +80,7 @@ def test_absolute_sum_of_changes_dynamic(sample_dataset):
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
-def test_absolute_sum_of_changes_multiple_columns(sample_dataset):
+def test_absolute_sum_of_changes_multiple_columns(sample_dataset: TSDataset) -> None:
     """Test calculation for multiple columns."""
     sample_dataset.add_feature("value2", [10, 13, 16, 20, 22, 25])  # Changes: +3, +3, +2, +3
 
@@ -103,7 +103,7 @@ def test_absolute_sum_of_changes_multiple_columns(sample_dataset):
     assert np.allclose(result_values_value2, expected_values_value2, equal_nan=True)
 
 
-def test_absolute_sum_of_changes_custom_out_column_names(sample_dataset):
+def test_absolute_sum_of_changes_custom_out_column_names(sample_dataset: TSDataset) -> None:
     """Test support for custom output column names."""
     transformer = AbsoluteSumOfChanges(
         columns="value",

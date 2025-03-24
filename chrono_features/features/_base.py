@@ -221,7 +221,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         dataset: TSDataset,
         column: str,
         window_type: WindowBase,
-    ):
+    ) -> np.ndarray:
         lens = calculate_window_lengths(
             dataset=dataset,
             window_type=window_type,
@@ -229,7 +229,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
 
         # Apply the function to the feature array
         feature_array = dataset.data[column].to_numpy()
-        result_array = self.apply_func_to_full_window(feature_array, self._numba_func, lens)
+        result_array = self.apply_func_to_full_window(feature=feature_array, func=self._numba_func, lens=lens)
 
         return result_array
 
@@ -298,5 +298,5 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         lens: np.ndarray,
         ts_lens: np.ndarray,
         window_type: WindowBase,
-    ):
+    ) -> np.array:
         raise NotImplementedError

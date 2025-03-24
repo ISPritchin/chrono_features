@@ -36,4 +36,5 @@
     "python.analysis.inlayHints.callArgumentNames": "partial",
     "python.analysis.autoImportCompletions": true,
     "python.analysis.inlayHints.pytestParameters": true,
+    "python.analysis.inlayHints.functionReturnTypes": true
 }

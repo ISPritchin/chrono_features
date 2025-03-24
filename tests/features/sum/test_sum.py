@@ -7,7 +7,7 @@ from chrono_features.ts_dataset import TSDataset
 
 
 @pytest.fixture
-def sample_dataset():
+def sample_dataset() -> TSDataset:
     data = pl.DataFrame(
         {
             "id": [1, 1, 1, 2, 2, 2],
@@ -18,7 +18,7 @@ def sample_dataset():
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
 
-def test_sum_expanding_with_optimization(sample_dataset):
+def test_sum_expanding_with_optimization(sample_dataset: TSDataset) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
         columns="value",
@@ -31,7 +31,7 @@ def test_sum_expanding_with_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_expanding_without_optimization(sample_dataset):
+def test_sum_expanding_without_optimization(sample_dataset: TSDataset) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=False,
         columns="value",
@@ -44,7 +44,7 @@ def test_sum_expanding_without_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_rolling_only_full_window_with_optimization(sample_dataset):
+def test_sum_rolling_only_full_window_with_optimization(sample_dataset: TSDataset) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
         columns="value",
@@ -57,7 +57,7 @@ def test_sum_rolling_only_full_window_with_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_rolling_all_windows_with_optimization(sample_dataset):
+def test_sum_rolling_all_windows_with_optimization(sample_dataset: TSDataset) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
         columns="value",
@@ -70,7 +70,7 @@ def test_sum_rolling_all_windows_with_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_dynamic_with_optimization(sample_dataset):
+def test_sum_dynamic_with_optimization(sample_dataset: TSDataset) -> None:
     sample_dataset.add_feature("window_len", [1, 2, 1, 1, 2, 1])
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
@@ -84,7 +84,7 @@ def test_sum_dynamic_with_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_sum_multiple_columns_with_optimization(sample_dataset):
+def test_sum_multiple_columns_with_optimization(sample_dataset: TSDataset) -> None:
     sample_dataset.add_feature("value2", [10, 20, 30, 40, 50, 60])
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
@@ -103,7 +103,7 @@ def test_sum_multiple_columns_with_optimization(sample_dataset):
     np.testing.assert_array_equal(result_values_value2, expected_values_value2)
 
 
-def test_sum_custom_out_column_names(sample_dataset):
+def test_sum_custom_out_column_names(sample_dataset: TSDataset) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
         columns="value",
@@ -118,7 +118,7 @@ def test_sum_custom_out_column_names(sample_dataset):
 
 
 @pytest.mark.parametrize("use_prefix_sum_optimization", [True, False])
-def test_sum_multiple_window_types(sample_dataset, use_prefix_sum_optimization):
+def test_sum_multiple_window_types(sample_dataset: TSDataset, use_prefix_sum_optimization: bool) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=use_prefix_sum_optimization,
         columns="value",
