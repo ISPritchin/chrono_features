@@ -11,10 +11,15 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_type: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="sum")
+        super().__init__(
+            columns=columns,
+            window_types=window_type,
+            out_column_names=out_column_names,
+            func_name="sum",
+        )
 
     @staticmethod
     @numba.njit
@@ -29,7 +34,9 @@ class AbsoluteSumOfChanges:
     def __new__(
         cls,
         columns: list[str] | str,
-        window_types: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        return AbsoluteSumOfChangesWithoutOptimization(columns, window_types, out_column_names)
+        return AbsoluteSumOfChangesWithoutOptimization(
+            columns=columns, window_type=window_types, out_column_names=out_column_names
+        )

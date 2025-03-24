@@ -11,13 +11,13 @@ from chrono_features.features.mean import Mean
 def sample_ts_dataset():
     """Fixture to create a sample TSDataset for testing."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10, 20, 30, 40, 50, 60],
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
@@ -124,21 +124,21 @@ class TestMeanNumbaLevel:
 def empty_ts_dataset():
     """Fixture to create an empty TSDataset for testing."""
     data = pl.DataFrame({"id": [], "timestamp": [], "value": []})
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
 def single_row_ts_dataset():
     """Fixture to create a TSDataset with a single row for testing."""
     data = pl.DataFrame({"id": [1], "timestamp": [1], "value": [10]})
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
 def ts_dataset_with_nan():
     """Fixture to create a TSDataset with NaN values for testing."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10.0, np.nan, 30.0, 40.0, 50.0, np.nan],
@@ -151,14 +151,14 @@ def ts_dataset_with_nan():
 def ts_dataset_multiple_columns():
     """Fixture to create a TSDataset with multiple columns for testing."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value1": [10, 20, 30, 40, 50, 60],
             "value2": [100, 200, 300, 400, 500, 600],
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 # Tests for the Mean class
@@ -217,7 +217,7 @@ class TestMean:
             columns="value",
             window_types=WindowType.ROLLING(size=10, only_full_window=True),
         )
-        transformed_dataset = mean_calculator.transform(sample_ts_dataset)
+        transformed_dataset = mean_calculator.transform(dataset=sample_ts_dataset)
 
         # Check that the new column is added
         assert "value_mean_rolling_10" in transformed_dataset.data.columns

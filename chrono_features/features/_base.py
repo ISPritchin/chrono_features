@@ -126,7 +126,7 @@ class FeatureGenerator(ABC):
                 raise ValueError(f"Column '{column}' not found in the dataset.")
 
             result_array = self.transform_for_window_type(
-                dataset,
+                dataset=dataset,
                 column=column,
                 window_type=window_type,
             )
@@ -254,7 +254,11 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         Raises:
             ValueError: If an unsupported window type is provided.
         """
-        super().__init__(columns, window_types, out_column_names)
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+        )
 
         if out_column_names is None:
             if func_name is None:

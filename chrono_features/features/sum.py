@@ -66,7 +66,12 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         window_types: list[str] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_types, out_column_names, func_name="sum")
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+            func_name="sum",
+        )
 
     @staticmethod
     def process_all_ts(
@@ -111,7 +116,12 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_types, out_column_names, func_name="sum")
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+            func_name="sum",
+        )
 
     @staticmethod
     @numba.njit
@@ -120,11 +130,11 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
     def transform_for_window_type(self, dataset, column, window_type):
         if not isinstance(window_type, WindowType.EXPANDING):
-            return super().transform_for_window_type(dataset, column, window_type)
+            return super().transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
         else:
             return SumWithPrefixSumOptimization(
                 columns=column, window_types=window_type, out_column_names=None
-            ).transform_for_window_type(dataset, column, window_type=window_type)
+            ).transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
 
 
 class Sum:
@@ -136,6 +146,14 @@ class Sum:
         use_prefix_sum_optimization: bool = False,
     ):
         if use_prefix_sum_optimization:
-            return SumWithPrefixSumOptimization(columns, window_types, out_column_names)
+            return SumWithPrefixSumOptimization(
+                columns=columns,
+                window_types=window_types,
+                out_column_names=out_column_names,
+            )
         else:
-            return SumWithoutOptimization(columns, window_types, out_column_names)
+            return SumWithoutOptimization(
+                columns=columns,
+                window_types=window_types,
+                out_column_names=out_column_names,
+            )

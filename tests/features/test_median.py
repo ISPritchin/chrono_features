@@ -11,7 +11,7 @@ from chrono_features.features.median import Median  # Импортируем н�
 def sample_ts_dataset():
     """Фикстура для создания тестового TSDataset."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10, 20, 30, 40, 50, 60],
@@ -125,41 +125,41 @@ class TestMedianNumbaLevel:
 def empty_ts_dataset():
     """Фикстура для создания пустого TSDataset."""
     data = pl.DataFrame({"id": [], "timestamp": [], "value": []})
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
 def single_row_ts_dataset():
     """Фикстура для создания TSDataset с одной строкой."""
     data = pl.DataFrame({"id": [1], "timestamp": [1], "value": [10]})
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
 def ts_dataset_with_nan():
     """Фикстура для создания TSDataset с NaN значениями."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10.0, np.nan, 30.0, 40.0, 50.0, np.nan],
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 @pytest.fixture
 def ts_dataset_multiple_columns():
     """Фикстура для создания TSDataset с несколькими колонками."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value1": [10, 20, 30, 40, 50, 60],
             "value2": [100, 200, 300, 400, 500, 600],
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 class TestMedian:

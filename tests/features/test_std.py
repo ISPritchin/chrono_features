@@ -11,13 +11,13 @@ from chrono_features.window_type import WindowType
 def sample_dataset():
     """Test dataset with two time series (id=1 and id=2)"""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1, 2, 3, 4, 6, 8],  # Values chosen for easy std calculation
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 def test_std_expanding(sample_dataset):
@@ -101,8 +101,8 @@ def test_std_custom_out_column_names(sample_dataset):
 
 def test_std_single_value_windows():
     """Test behavior with windows containing single values"""
-    data = pl.DataFrame({"id": [1, 1, 2, 2], "timestamp": [1, 2, 1, 2], "value": [1, 2, 3, 4]})
-    dataset = TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    data = pl.DataFrame(data={"id": [1, 1, 2, 2], "timestamp": [1, 2, 1, 2], "value": [1, 2, 3, 4]})
+    dataset = TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
     transformer = Std(columns="value", window_types=WindowType.ROLLING(size=1))
     transformed_dataset = transformer.transform(dataset)

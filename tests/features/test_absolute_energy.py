@@ -11,13 +11,13 @@ from chrono_features.window_type import WindowType
 def sample_dataset():
     """Test dataset fixture with sample time series data."""
     data = pl.DataFrame(
-        {
+        data={
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1, 2, 3, 4, 5, 6],  # Values to calculate energy from
         }
     )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+    return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
 def test_absolute_energy_expanding(sample_dataset):

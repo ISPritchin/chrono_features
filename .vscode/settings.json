@@ -33,4 +33,7 @@
     "terminal.integrated.cursorStyle": "line",
     "terminal.integrated.cursorBlinking": true,
     "python.defaultInterpreterPath": "~/anaconda3/bin/python3",
+    "python.analysis.inlayHints.callArgumentNames": "partial",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.inlayHints.pytestParameters": true,
 }

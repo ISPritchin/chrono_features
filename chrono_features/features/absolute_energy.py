@@ -11,10 +11,15 @@ class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTS
     def __init__(
         self,
         columns: list[str] | str,
-        window_type: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="absolute_energy")
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+            func_name="absolute_energy",
+        )
 
     @staticmethod
     @numba.njit
@@ -26,7 +31,11 @@ class AbsoluteEnergy:
     def __new__(
         cls,
         columns: list[str] | str,
-        window_types: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        return AbsoluteEnergyWithoutOptimization(columns, window_types, out_column_names)
+        return AbsoluteEnergyWithoutOptimization(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+        )

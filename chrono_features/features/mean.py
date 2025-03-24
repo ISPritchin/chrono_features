@@ -12,7 +12,12 @@ class Mean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_types, out_column_names, func_name="mean")
+        super().__init__(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+            func_name="mean",
+        )
 
     @staticmethod
     @numba.njit

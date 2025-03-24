@@ -14,7 +14,12 @@ class StdWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         window_type: WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        super().__init__(columns, window_type, out_column_names, func_name="std")
+        super().__init__(
+            columns=columns,
+            window_types=window_type,
+            out_column_names=out_column_names,
+            func_name="std",
+        )
 
     @staticmethod
     @numba.njit
@@ -32,4 +37,4 @@ class Std:
         window_types: WindowType,
         out_column_names: list[str] | str | None = None,
     ):
-        return StdWithoutOptimization(columns, window_types, out_column_names)
+        return StdWithoutOptimization(columns=columns, window_type=window_types, out_column_names=out_column_names)
