@@ -68,7 +68,11 @@ def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.
     if isinstance(window_type, WindowType.EXPANDING):
         res = _calculate_expanding_window_length(ids)
     elif isinstance(window_type, WindowType.ROLLING):
-        res = _calculate_rolling_window_length(ids, window_type.size, window_type.only_full_window)
+        res = _calculate_rolling_window_length(
+            ids=ids,
+            window_size=window_type.size,
+            only_full_window=window_type.only_full_window,
+        )
     else:
         raise ValueError(f"Unsupported window type: {window_type}")
 
@@ -180,9 +184,15 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
                 for window_type in self.window_types
             ]
 
+        self.numba_kwargs = {}
+
     @staticmethod
     @numba.njit
-    def apply_func_to_full_window(feature: np.ndarray, func: Callable, lens: np.ndarray) -> np.ndarray:
+    def apply_func_to_full_window(
+        feature: np.ndarray,
+        func: Callable,
+        lens: np.ndarray,
+    ) -> np.ndarray:
         """
         Applies a function to sliding or expanding windows of a feature array.
 
@@ -229,7 +239,9 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
 
         # Apply the function to the feature array
         feature_array = dataset.data[column].to_numpy()
-        result_array = self.apply_func_to_full_window(feature=feature_array, func=self._numba_func, lens=lens)
+        result_array = self.apply_func_to_full_window(
+            feature=feature_array, func=self._numba_func, lens=lens, **self.numba_kwargs
+        )
 
         return result_array
 
