@@ -25,4 +25,4 @@ line-length = 120
 markers = [
     "performance: for compare several implementations"
 ]
-addopts = "-v --testmon --strict-markers"
+addopts = "-v -s --strict-markers"

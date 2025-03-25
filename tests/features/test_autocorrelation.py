@@ -122,8 +122,6 @@ def test_autocorrelation_multiple_columns(sample_dataset: TSDataset) -> None:
             -0.05603766997559098,  # корреляция между [1, 4, 3, 7, 4] и [4, 3, 7, 4, 10]
         ]
     )
-    print(result_values1)
-    print(expected1)
     np.testing.assert_array_almost_equal(result_values1, expected1, decimal=5)
 
     # Проверяем второй столбец (должен быть весь NaN, так как значения постоянны)

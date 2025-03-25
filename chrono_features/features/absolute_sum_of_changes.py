@@ -36,7 +36,7 @@ class AbsoluteSumOfChanges:
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-    ):
+    ) -> AbsoluteSumOfChangesWithoutOptimization:
         return AbsoluteSumOfChangesWithoutOptimization(
             columns=columns, window_type=window_types, out_column_names=out_column_names
         )
