@@ -36,5 +36,5 @@ class Std:
         columns: list[str] | str,
         window_types: WindowType,
         out_column_names: list[str] | str | None = None,
-    ):
+    ) -> StdWithoutOptimization:
         return StdWithoutOptimization(columns=columns, window_type=window_types, out_column_names=out_column_names)
