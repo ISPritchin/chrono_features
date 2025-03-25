@@ -8,7 +8,7 @@ from chrono_features.window_type import WindowType
 
 
 @pytest.fixture
-def sample_dataset():
+def sample_dataset() -> TSDataset:
     """Test dataset fixture with sample time series data."""
     data = pl.DataFrame(
         data={
@@ -20,7 +20,7 @@ def sample_dataset():
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
 
-def test_absolute_energy_expanding(sample_dataset):
+def test_absolute_energy_expanding(sample_dataset: TSDataset) -> None:
     """Test expanding window calculation of absolute energy."""
     transformer = AbsoluteEnergy(
         columns="value",
@@ -37,7 +37,7 @@ def test_absolute_energy_expanding(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_absolute_energy_rolling(sample_dataset):
+def test_absolute_energy_rolling(sample_dataset: TSDataset) -> None:
     """Test rolling window calculation of absolute energy."""
     transformer = AbsoluteEnergy(
         columns="value",
@@ -54,7 +54,7 @@ def test_absolute_energy_rolling(sample_dataset):
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
-def test_absolute_energy_dynamic(sample_dataset):
+def test_absolute_energy_dynamic(sample_dataset: TSDataset) -> None:
     """Test dynamic window calculation of absolute energy."""
     # Add window length column
     sample_dataset.add_feature("window_len", [1, 2, 2, 1, 2, 2])
@@ -80,7 +80,7 @@ def test_absolute_energy_dynamic(sample_dataset):
     np.testing.assert_array_equal(result_values, expected_values)
 
 
-def test_absolute_energy_multiple_columns(sample_dataset):
+def test_absolute_energy_multiple_columns(sample_dataset: TSDataset) -> None:
     """Test calculation for multiple columns."""
     sample_dataset.add_feature("value2", [10, 20, 30, 40, 50, 60])
 
@@ -103,7 +103,7 @@ def test_absolute_energy_multiple_columns(sample_dataset):
     np.testing.assert_array_equal(result_values_value2, expected_values_value2)
 
 
-def test_absolute_energy_custom_out_column_names(sample_dataset):
+def test_absolute_energy_custom_out_column_names(sample_dataset: TSDataset) -> None:
     """Test support for custom output column names."""
     transformer = AbsoluteEnergy(
         columns="value",

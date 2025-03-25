@@ -144,7 +144,7 @@ class Sum:
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         use_prefix_sum_optimization: bool = False,
-    ):
+    ) -> SumWithPrefixSumOptimization | SumWithoutOptimization:
         if use_prefix_sum_optimization:
             return SumWithPrefixSumOptimization(
                 columns=columns,
