@@ -1,4 +1,5 @@
 from typing import Iterable
+
 import numba
 import numpy as np
 

@@ -5,7 +5,7 @@ from chrono_features.features._base import (
     _FromNumbaFuncWithoutCalculatedForEachTS,
     _FromNumbaFuncWithoutCalculatedForEachTSPoint,
 )
-from chrono_features.window_type import WindowType, WindowBase
+from chrono_features.window_type import WindowBase, WindowType
 
 
 @numba.njit

@@ -1,9 +1,10 @@
-import pytest
 import numpy as np
 import polars as pl
+import pytest
+
+from chrono_features.features.median import Median  # Импортируем новый класс
 from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase, WindowType
-from chrono_features.features.median import Median  # Импортируем новый класс
 
 
 # Фикстуры

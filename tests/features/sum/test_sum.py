@@ -1,6 +1,7 @@
-import pytest
-import polars as pl
 import numpy as np
+import polars as pl
+import pytest
+
 from chrono_features.features._base import WindowType
 from chrono_features.features.sum import Sum
 from chrono_features.ts_dataset import TSDataset

@@ -1,6 +1,6 @@
-import pytest
 import numpy as np
 import polars as pl
+import pytest
 
 from chrono_features.features.absolute_sum_of_changes import AbsoluteSumOfChanges
 from chrono_features.ts_dataset import TSDataset
