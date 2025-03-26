@@ -7,7 +7,7 @@ import numpy as np
 import polars as pl
 
 from chrono_features.ts_dataset import TSDataset
-from chrono_features.window_type import WindowType, WindowBase
+from chrono_features.window_type import WindowBase, WindowType
 
 
 @numba.jit(nopython=True)
@@ -123,6 +123,7 @@ class FeatureGenerator(ABC):
         if len(self.columns) * len(self.window_types) != len(self.out_column_names):
             raise ValueError("The number of columns and output column names must match.")
 
+        dataset_copy = dataset.clone()
         for (column, window_type), out_column_name in zip(
             product(self.columns, self.window_types), self.out_column_names, strict=True
         ):
@@ -136,9 +137,9 @@ class FeatureGenerator(ABC):
             )
 
             # Add the result as a new column to the dataset
-            dataset.data = dataset.data.with_columns(pl.Series(result_array).alias(out_column_name))
+            dataset_copy.add_feature(values=pl.Series(result_array), name=out_column_name)
 
-        return dataset
+        return dataset_copy
 
     @abstractmethod
     def transform_for_window_type(

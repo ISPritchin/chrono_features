@@ -1,9 +1,9 @@
-import pytest
 import numpy as np
 import polars as pl
+import pytest
 
-from chrono_features.ts_dataset import TSDataset
 from chrono_features.features import SimpleMovingAverage, WeightedMovingAverage
+from chrono_features.ts_dataset import TSDataset
 
 
 @pytest.fixture
@@ -106,7 +106,7 @@ def test_weighted_moving_average_falls_back_to_simple(sample_dataset):
     expected = sma.transform(sample_dataset)
 
     # Should produce same results as simple moving average
-    result_values = result.data["value_simple_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_weighted_moving_average_rolling_3"].to_numpy()
     expected_values = expected.data["value_simple_moving_average_rolling_3"].to_numpy()
 
     np.testing.assert_array_equal(result_values, expected_values)

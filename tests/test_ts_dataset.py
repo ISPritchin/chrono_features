@@ -80,4 +80,4 @@ def test_add_feature_existing_column():
     with pytest.raises(expected_exception=ValueError) as exc_info:
         dataset.add_feature(name=existing_column_name, values=new_values)
 
-    assert str(exc_info.value) == "Column 'value' already exists."
+    assert str(exc_info.value) == "Column 'value' already exists in the dataset"

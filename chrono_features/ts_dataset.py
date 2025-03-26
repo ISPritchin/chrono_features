@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import numba
 import numpy as np
 import polars as pl
@@ -120,7 +122,7 @@ class TSDataset:
             raise ValueError("Length of values does not match the dataset length.")
 
         if name in self.data.columns:
-            raise ValueError(f"Column '{name}' already exists.")
+            raise ValueError(f"Column '{name}' already exists in the dataset")
 
         self.data = self.data.with_columns(pl.Series(values).alias(name))
 
@@ -129,3 +131,6 @@ class TSDataset:
             return self.data[self.id_column_name].hash().to_numpy()
 
         return self.data[self.id_column_name].to_numpy()
+
+    def clone(self):
+        return deepcopy(self)

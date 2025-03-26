@@ -1,6 +1,7 @@
 from .absolute_energy import AbsoluteEnergy
 from .absolute_sum_of_changes import AbsoluteSumOfChanges
 from .autocorrelation import Autocorrelation
+from .max import Max  # Add this line
 from .mean import Mean, SimpleMovingAverage, WeightedMovingAverage
 from .median import Median
 from .std import Std
@@ -16,4 +17,5 @@ __all__ = [
     "Median",
     "Std",
     "Sum",
+    "Max",  # Add this line
 ]
