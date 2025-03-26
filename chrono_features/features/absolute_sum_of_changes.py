@@ -13,12 +13,13 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
         columns: list[str] | str,
         window_type: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
+        func_name="absolute_sum_of_changes",
     ):
         super().__init__(
             columns=columns,
             window_types=window_type,
             out_column_names=out_column_names,
-            func_name="sum",
+            func_name=func_name,
         )
 
     @staticmethod

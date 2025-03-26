@@ -115,12 +115,13 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
+        func_name="sum",
     ):
         super().__init__(
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
-            func_name="sum",
+            func_name=func_name,
         )
 
     @staticmethod

@@ -11,6 +11,7 @@ class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
+        func_name="median",
     ):
         super().__init__(
             columns=columns,

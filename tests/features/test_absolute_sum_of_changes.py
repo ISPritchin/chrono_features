@@ -33,7 +33,7 @@ def test_absolute_sum_of_changes_expanding(sample_dataset: TSDataset) -> None:
     # For id=2: [NaN, |5-4|=1, |8-5| + 1 = 3+1=4]
     expected_values = np.array([np.nan, 2, 5, np.nan, 1, 4])
 
-    result_values = transformed_dataset.data["value_sum_expanding"].to_numpy()
+    result_values = transformed_dataset.data["value_absolute_sum_of_changes_expanding"].to_numpy()
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -50,7 +50,7 @@ def test_absolute_sum_of_changes_rolling(sample_dataset: TSDataset) -> None:
     # For id=2: [NaN, |5-4|=1, |8-5|=3]
     expected_values = np.array([np.nan, 2, 3, np.nan, 1, 3])
 
-    result_values = transformed_dataset.data["value_sum_rolling_2"].to_numpy()
+    result_values = transformed_dataset.data["value_absolute_sum_of_changes_rolling_2"].to_numpy()
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -76,7 +76,7 @@ def test_absolute_sum_of_changes_dynamic(sample_dataset: TSDataset) -> None:
     #   - window_len=2: |8-5|=3
     expected_values = np.array([np.nan, 2, 3, np.nan, 1, 3])
 
-    result_values = transformed_dataset.data["value_sum_dynamic_based_on_window_len"].to_numpy()
+    result_values = transformed_dataset.data["value_absolute_sum_of_changes_dynamic_based_on_window_len"].to_numpy()
     assert np.allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -92,14 +92,14 @@ def test_absolute_sum_of_changes_multiple_columns(sample_dataset: TSDataset) -> 
 
     # Check results for 'value' column (same as first test)
     expected_values_value = np.array([np.nan, 2, 5, np.nan, 1, 4])
-    result_values_value = transformed_dataset.data["value_sum_expanding"].to_numpy()
+    result_values_value = transformed_dataset.data["value_absolute_sum_of_changes_expanding"].to_numpy()
     assert np.allclose(result_values_value, expected_values_value, equal_nan=True)
 
     # Check results for 'value2' column:
     # For id=1: [NaN, |13-10|=3, |16-13| + 3 = 3+3=6]
     # For id=2: [NaN, |22-20|=2, |25-22| + 2 = 3+2=5]
     expected_values_value2 = np.array([np.nan, 3, 6, np.nan, 2, 5])
-    result_values_value2 = transformed_dataset.data["value2_sum_expanding"].to_numpy()
+    result_values_value2 = transformed_dataset.data["value2_absolute_sum_of_changes_expanding"].to_numpy()
     assert np.allclose(result_values_value2, expected_values_value2, equal_nan=True)
 
 

@@ -13,12 +13,13 @@ class StdWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         columns: list[str] | str,
         window_type: WindowType,
         out_column_names: list[str] | str | None = None,
+        func_name="std",
     ):
         super().__init__(
             columns=columns,
             window_types=window_type,
             out_column_names=out_column_names,
-            func_name="std",
+            func_name=func_name,
         )
 
     @staticmethod
@@ -34,7 +35,7 @@ class Std:
     def __new__(
         cls,
         columns: list[str] | str,
-        window_types: WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> StdWithoutOptimization:
         return StdWithoutOptimization(columns=columns, window_type=window_types, out_column_names=out_column_names)

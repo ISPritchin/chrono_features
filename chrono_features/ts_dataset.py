@@ -16,14 +16,14 @@ class TSDataset:
         data (pl.DataFrame): The underlying DataFrame containing the time series data.
     """
 
-    def __init__(self, data: pl.DataFrame, id_column_name: str, ts_column_name: str):
+    def __init__(self, data: pl.DataFrame, *, ts_column_name: str, id_column_name: str):
         """
         Initializes the TSDataset with the given DataFrame and column names.
 
         Args:
             data (pl.DataFrame): The DataFrame containing the time series data.
-            id_column_name (str): The name of the column containing identifiers.
             ts_column_name (str): The name of the column containing timestamps.
+            id_column_name (str): The name of the column containing identifiers.
         """
         self.id_column_name = id_column_name
         self.ts_column_name = ts_column_name
