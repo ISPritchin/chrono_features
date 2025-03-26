@@ -14,6 +14,34 @@ class TransformationPipeline:
     Attributes:
         transformations: List of FeatureGenerator objects to apply.
         verbose: Whether to print progress information during transformation.
+
+    Examples:
+        >>> from chrono_features.ts_dataset import TSDataset
+        >>> from chrono_features.features import Mean, Std
+        >>> from chrono_features.window_type import WindowType
+        >>> import polars as pl
+
+        >>> # Create sample data
+        >>> data = pl.DataFrame({
+        ...     "id": [1, 1, 1, 2, 2],
+        ...     "timestamp": [1, 2, 3, 1, 2],
+        ...     "value": [10, 20, 30, 40, 50]
+        ... })
+        >>> dataset = TSDataset(data, id_column="id", timestamp_column="timestamp")
+
+        >>> # Create feature generators
+        >>> mean_feature = Mean(
+        ...     columns="value",
+        ...     window_types=WindowType.ROLLING(size=2)
+        ... )
+        >>> std_feature = Std(
+        ...     columns="value",
+        ...     window_types=WindowType.ROLLING(size=2)
+        ... )
+
+        >>> # Create and apply pipeline
+        >>> pipeline = TransformationPipeline([mean_feature, std_feature])
+        >>> transformed_dataset = pipeline.fit_transform(dataset)
     """
 
     def __init__(self, transformations: List[FeatureGenerator], verbose: bool = True):

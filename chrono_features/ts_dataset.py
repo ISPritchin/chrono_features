@@ -134,3 +134,12 @@ class TSDataset:
 
     def clone(self):
         return deepcopy(self)
+
+    def write_csv(self, path: str) -> None:
+        """
+        Saves the dataset to a CSV file.
+
+        Args:
+            path (str): Path to save the CSV file
+        """
+        self.data.write_csv(path)
