@@ -51,7 +51,16 @@ print(transformed_dataset.data)
 The `TSDataset` class is a wrapper around a polars DataFrame that provides additional functionality for time series data
 
 ```python
+import polars as pl
+
 from chrono_features import TSDataset
+
+
+df = pl.DataFrame({
+    "id": [1, 1, 1, 2, 2, 2],
+    "timestamp": [1, 2, 3, 1, 2, 3],
+    "value": [5, 3, 4, 10, 2, 3],
+})
 
 # Create a TSDataset from a polars DataFrame
 dataset = TSDataset(
@@ -97,6 +106,7 @@ dynamic_window = WindowType.DYNAMIC(len_column_name="window_len")
 You can use multiple window types for a single feature generator:
 
 ```python
+from chrono_features import WindowType
 from chrono_features.features import Max
 
 # Using multiple window types in a single transformer
@@ -138,9 +148,20 @@ You can combine multiple transformers into a pipeline for more efficient process
 import pandas as pd
 import polars as pl
 
-from chrono_features import WindowType
+from chrono_features import TSDataset, WindowType
 from chrono_features.features import Sum, Median, Max
 from chrono_features.transformation_pipeline import TransformationPipeline
+
+
+dataset = TSDataset(
+    data=pl.DataFrame({
+        "id": [1, 1, 1, 2, 2, 2],
+        "timestamp": [1, 2, 3, 1, 2, 3],
+        "value": [1, 2, 3, 4, 5, 6],
+    }),
+    id_column_name="id",
+    ts_column_name="timestamp"
+)
 
 # Create a pipeline with multiple transformers
 pipeline = TransformationPipeline(

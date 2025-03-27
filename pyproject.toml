@@ -21,6 +21,7 @@ keywords = ["timeseries", "features"]
 [tool.black]
 line-length = 120
 
+
 # Ruff configuration
 [tool.ruff]
 # Target Python version
