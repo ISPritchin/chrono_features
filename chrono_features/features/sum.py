@@ -299,7 +299,7 @@ class Sum:
             Either SumWithPrefixSumOptimization or SumWithoutOptimization based on the
             use_prefix_sum_optimization flag.
         """
-        if use_prefix_sum_optimization:
+        if use_prefix_sum_optimization or isinstance(window_types, WindowType.EXPANDING):
             return SumWithPrefixSumOptimization(
                 columns=columns,
                 window_types=window_types,

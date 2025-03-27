@@ -245,7 +245,10 @@ def save_results_to_excel(results: list[dict], dataset_info: dict, filename: str
     # Add data
     for r_idx, row in enumerate(dataframe_to_rows(info_df, index=False, header=True), 2):
         for c_idx, value in enumerate(row, 1):
-            info_sheet.cell(row=r_idx, column=c_idx, value=value)
+            cell = info_sheet.cell(row=r_idx, column=c_idx, value=value)
+            # Add alignment for all cells
+            if c_idx in {1, 2}:  # Value column
+                cell.alignment = Alignment(horizontal="left")
 
     # Auto-adjust column widths for info sheet
     for column in info_sheet.columns:

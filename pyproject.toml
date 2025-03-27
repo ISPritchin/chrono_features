@@ -95,14 +95,6 @@ unfixable = []
 [tool.ruff.lint.isort]
 # Group imports into sections: future, standard library, third-party, first-party, local
 known-first-party = ["chrono_features"]
-# Number of blank lines between import sections
-lines-after-imports = 2
-# Sort by import name, not by line length
-length-sort = false
-# Add a trailing comma to import statements
-force-single-line = false
-# Use parentheses for line continuation
-force-wrap-aliases = true
 
 # Configure flake8-quotes
 [tool.ruff.lint.flake8-quotes]

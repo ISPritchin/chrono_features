@@ -11,7 +11,6 @@ from chrono_features.features.median import Median
 from chrono_features.features.std import Std
 from chrono_features.features.sum import Sum
 
-
 __all__ = [
     "AbsoluteEnergy",
     "AbsoluteSumOfChanges",

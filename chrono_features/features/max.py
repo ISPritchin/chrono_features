@@ -202,7 +202,7 @@ class Max:
         Returns:
             Either MaxWithOptimization or MaxWithoutOptimization based on the use_optimization flag.
         """
-        if use_optimization:
+        if use_optimization or isinstance(window_types, WindowType.EXPANDING):
             return MaxWithOptimization(
                 columns=columns,
                 window_types=window_types,
