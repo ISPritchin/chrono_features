@@ -137,6 +137,7 @@ You can combine multiple transformers into a pipeline for more efficient process
 ```python
 import pandas as pd
 import polars as pl
+
 from chrono_features import WindowType
 from chrono_features.features import Sum, Median, Max
 from chrono_features.transformation_pipeline import TransformationPipeline
