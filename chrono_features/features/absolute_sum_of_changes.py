@@ -6,8 +6,7 @@ from chrono_features.window_type import WindowType
 
 
 class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Absolute sum of changes feature generator for time series data.
+    """Absolute sum of changes feature generator for time series data.
 
     Calculates the sum of absolute differences between consecutive values within
     specified windows. This feature measures the total amount of change or volatility
@@ -16,13 +15,13 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_type: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="absolute_sum_of_changes",
-    ):
-        """
-        Initialize the absolute sum of changes feature generator.
+        func_name: str = "absolute_sum_of_changes",
+    ) -> None:
+        """Initialize the absolute sum of changes feature generator.
 
         Args:
             columns: Columns to calculate absolute sum of changes for.
@@ -40,8 +39,7 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the absolute sum of changes of the input array.
+        """Calculate the absolute sum of changes of the input array.
 
         Args:
             xs (np.ndarray): The input window.
@@ -52,12 +50,11 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
         if len(xs) <= 1:
             return np.nan
 
-        return np.sum(np.abs((xs[1:] - xs[:-1])))
+        return np.sum(np.abs(xs[1:] - xs[:-1]))
 
 
 class AbsoluteSumOfChanges:
-    """
-    Factory class for creating absolute sum of changes feature generators.
+    """Factory class for creating absolute sum of changes feature generators.
 
     Provides a unified interface to create absolute sum of changes implementations.
 
@@ -88,12 +85,12 @@ class AbsoluteSumOfChanges:
 
     def __new__(
         cls,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> AbsoluteSumOfChangesWithoutOptimization:
-        """
-        Create an absolute sum of changes feature generator.
+        """Create an absolute sum of changes feature generator.
 
         Args:
             columns: Columns to calculate absolute sum of changes for.
@@ -104,5 +101,7 @@ class AbsoluteSumOfChanges:
             AbsoluteSumOfChangesWithoutOptimization: An absolute sum of changes feature generator.
         """
         return AbsoluteSumOfChangesWithoutOptimization(
-            columns=columns, window_type=window_types, out_column_names=out_column_names
+            columns=columns,
+            window_type=window_types,
+            out_column_names=out_column_names,
         )

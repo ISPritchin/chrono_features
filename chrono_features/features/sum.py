@@ -5,13 +5,13 @@ from chrono_features.features._base import (
     _FromNumbaFuncWithoutCalculatedForEachTS,
     _FromNumbaFuncWithoutCalculatedForEachTSPoint,
 )
+from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase, WindowType
 
 
 @numba.njit
 def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
-    """
-    Efficiently calculate cumulative sum for expanding windows using Numba optimization.
+    """Efficiently calculate cumulative sum for expanding windows using Numba optimization.
 
     This function maintains a running sum for each time series, resetting when a new
     time series begins (indicated by lens[i] == 1).
@@ -37,8 +37,7 @@ def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
 
 @numba.njit
 def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """
-    Calculate sum for dynamic windows using prefix sum optimization.
+    """Calculate sum for dynamic windows using prefix sum optimization.
 
     This function uses a prefix sum array to efficiently calculate sums for
     variable-sized windows within each time series.
@@ -79,8 +78,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
 
 @numba.njit
 def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """
-    Optimized processing for rolling windows.
+    """Optimized processing for rolling windows.
 
     For rolling windows, this implementation uses the same algorithm as dynamic windows
     since both can be efficiently calculated using prefix sums.
@@ -97,8 +95,7 @@ def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
 
 
 class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
-    """
-    Sum feature generator with optimized implementation using prefix sums.
+    """Sum feature generator with optimized implementation using prefix sums.
 
     This class provides efficient sum calculations for different window types
     by using specialized prefix sum algorithms that avoid redundant calculations.
@@ -106,12 +103,12 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[str] | WindowType,
         out_column_names: list[str] | str | None = None,
-    ):
-        """
-        Initialize the optimized sum feature generator.
+    ) -> None:
+        """Initialize the optimized sum feature generator.
 
         Args:
             columns: Columns to calculate sum for.
@@ -132,8 +129,7 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         lens: np.ndarray,
         window_type: WindowBase,
     ) -> np.ndarray:
-        """
-        Process all time series using the appropriate method based on window type.
+        """Process all time series using the appropriate method based on window type.
 
         Selects the optimal algorithm for each window type to maximize performance.
 
@@ -159,12 +155,12 @@ class SumWithPrefixSumOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         if isinstance(window_type, WindowType.DYNAMIC):
             return process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
 
-        raise ValueError("Unsupported window type")
+        msg = "Unsupported window type"
+        raise ValueError(msg)
 
 
 class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Sum feature generator using the standard implementation.
+    """Sum feature generator using the standard implementation.
 
     This class uses the base class's window processing logic with a simple sum function,
     which is less optimized but more straightforward than the prefix sum approach.
@@ -172,13 +168,13 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="sum",
-    ):
-        """
-        Initialize the standard sum feature generator.
+        func_name: str = "sum",
+    ) -> None:
+        """Initialize the standard sum feature generator.
 
         Args:
             columns: Columns to calculate sum for.
@@ -196,8 +192,7 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the sum of the input array.
+        """Calculate the sum of the input array.
 
         Args:
             xs: Input array.
@@ -207,9 +202,8 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         """
         return np.sum(xs)
 
-    def transform_for_window_type(self, dataset, column, window_type):
-        """
-        Transform data for a specific window type.
+    def transform_for_window_type(self, dataset: TSDataset, column: "str", window_type: WindowBase) -> np.ndarray:
+        """Transform data for a specific window type.
 
         For expanding windows, this method uses the optimized implementation
         even when the standard implementation is selected.
@@ -224,15 +218,16 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         """
         if not isinstance(window_type, WindowType.EXPANDING):
             return super().transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
-        else:
-            return SumWithPrefixSumOptimization(
-                columns=column, window_types=window_type, out_column_names=None
-            ).transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
+
+        return SumWithPrefixSumOptimization(
+            columns=column,
+            window_types=window_type,
+            out_column_names=None,
+        ).transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
 
 
 class Sum:
-    """
-    Factory class for creating sum feature generators.
+    """Factory class for creating sum feature generators.
 
     Provides a unified interface to create either optimized or standard implementations
     based on the user's preference.
@@ -286,13 +281,13 @@ class Sum:
 
     def __new__(
         cls,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         use_prefix_sum_optimization: bool = False,
     ) -> SumWithPrefixSumOptimization | SumWithoutOptimization:
-        """
-        Create a sum feature generator.
+        """Create a sum feature generator.
 
         Args:
             columns: Columns to calculate sum for.
@@ -310,9 +305,8 @@ class Sum:
                 window_types=window_types,
                 out_column_names=out_column_names,
             )
-        else:
-            return SumWithoutOptimization(
-                columns=columns,
-                window_types=window_types,
-                out_column_names=out_column_names,
-            )
+        return SumWithoutOptimization(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+        )

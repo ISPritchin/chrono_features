@@ -6,8 +6,7 @@ from chrono_features.window_type import WindowType
 
 
 class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Autocorrelation feature generator for time series data.
+    """Autocorrelation feature generator for time series data.
 
     Calculates the autocorrelation of values within specified windows at a given lag.
     Autocorrelation measures the correlation between a time series and a lagged version
@@ -41,13 +40,13 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         lag: int,
         out_column_names: list[str] | str | None = None,
     ) -> None:
-        """
-        Initialize the autocorrelation feature generator.
+        """Initialize the autocorrelation feature generator.
 
         Args:
             columns: Columns to calculate autocorrelation for.
@@ -66,7 +65,8 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             func_name=func_name,
         )
         if lag <= 0:
-            raise ValueError("Lag must be greater than 0")
+            msg = "Lag must be greater than 0"
+            raise ValueError(msg)
 
         self.numba_kwargs = {"lag": lag}
 
@@ -78,8 +78,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         lens: np.ndarray,
         lag: int,
     ) -> np.ndarray:
-        """
-        Applies a function to sliding or expanding windows of a feature array.
+        """Applies a function to sliding or expanding windows of a feature array.
 
         Args:
             feature (np.ndarray): The input feature array.
@@ -101,8 +100,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray, lag: int) -> np.ndarray:
-        """
-        Calculate the autocorrelation of the input array at the specified lag.
+        """Calculate the autocorrelation of the input array at the specified lag.
 
         Args:
             xs (np.ndarray): The input window.
@@ -119,8 +117,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
 @numba.njit
 def corr(x: np.array, y: np.array) -> float:
-    """
-    Calculate the Pearson correlation coefficient between two arrays.
+    """Calculate the Pearson correlation coefficient between two arrays.
 
     This is a Numba-optimized implementation that avoids using numpy's built-in
     correlation functions for better performance.
@@ -155,8 +152,7 @@ def corr(x: np.array, y: np.array) -> float:
 
 @numba.njit
 def autocorrelation(x: np.array, lag: int = 12) -> float:
-    """
-    Calculate the autocorrelation of an array at the specified lag.
+    """Calculate the autocorrelation of an array at the specified lag.
 
     Autocorrelation measures the correlation between a time series and a lagged version
     of itself.

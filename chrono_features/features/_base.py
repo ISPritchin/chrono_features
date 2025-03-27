@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from itertools import product
-from typing import Callable
+from typing import Callable, NoReturn, Optional
 
 import numba
 import numpy as np
@@ -23,7 +23,7 @@ def _calculate_expanding_window_length(ids: np.ndarray) -> np.ndarray:
 
 
 @numba.njit
-def _calculate_rolling_window_length(ids: np.ndarray, window_size: int, only_full_window: bool) -> np.ndarray:
+def _calculate_rolling_window_length(*, ids: np.ndarray, window_size: int, only_full_window: bool) -> np.ndarray:
     lens = np.zeros(len(ids), dtype=np.int32)
     lens[0] = 1
     for i in range(1, len(lens)):
@@ -40,15 +40,13 @@ def _calculate_rolling_window_length(ids: np.ndarray, window_size: int, only_ful
                 lens[i] = 0
     else:
         for i in range(len(lens)):
-            if lens[i] > window_size:
-                lens[i] = window_size
+            lens[i] = min(lens[i], window_size)
 
     return lens
 
 
 def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.ndarray:
-    """
-    Calculate window lengths for each point in the dataset.
+    """Calculate window lengths for each point in the dataset.
 
     Args:
         dataset (TSDataset): The input dataset.
@@ -62,7 +60,7 @@ def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.
         return dataset.data[window_type.len_column_name].to_numpy()
 
     # Get the IDs and convert them to a hash for consistent comparison
-    ids = dataset._get_numeric_id_column_values()
+    ids = dataset.get_numeric_id_column_values()
 
     # Calculate window lengths based on the window type
     if isinstance(window_type, WindowType.EXPANDING):
@@ -74,7 +72,8 @@ def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.
             only_full_window=window_type.only_full_window,
         )
     else:
-        raise ValueError(f"Unsupported window type: {window_type}")
+        msg = f"Unsupported window type: {window_type}"
+        raise TypeError(msg)
 
     return res
 
@@ -96,7 +95,12 @@ def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
 
 
 class FeatureGenerator(ABC):
-    def __init__(self, columns: list[str] | str, window_types: WindowType, out_column_names=None):
+    def __init__(
+        self,
+        columns: list[str] | str,
+        window_types: WindowType,
+        out_column_names: str | list[str] | None = None,
+    ) -> None:
         if isinstance(columns, str):
             columns = [columns]
         if not isinstance(columns, list) or not len(columns):
@@ -118,17 +122,22 @@ class FeatureGenerator(ABC):
 
     def transform(self, dataset: TSDataset) -> np.ndarray:
         if not self.columns:
-            raise ValueError("No columns specified for transformation.")
+            msg = "No columns specified for transformation."
+            raise ValueError(msg)
 
         if len(self.columns) * len(self.window_types) != len(self.out_column_names):
-            raise ValueError("The number of columns and output column names must match.")
+            msg = "The number of columns and output column names must match."
+            raise ValueError(msg)
 
         dataset_copy = dataset.clone()
         for (column, window_type), out_column_name in zip(
-            product(self.columns, self.window_types), self.out_column_names, strict=True
+            product(self.columns, self.window_types),
+            self.out_column_names,
+            strict=True,
         ):
             if column not in dataset.data.columns:
-                raise ValueError(f"Column '{column}' not found in the dataset.")
+                msg = f"Column '{column}' not found in the dataset."
+                raise ValueError(msg)
 
             result_array = self.transform_for_window_type(
                 dataset=dataset,
@@ -147,13 +156,13 @@ class FeatureGenerator(ABC):
         dataset: TSDataset,
         column: str,
         window_type: WindowBase,
-    ):
+    ) -> NoReturn:
         raise NotImplementedError
 
 
 class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
-    """
-    Base class for feature generators that use Numba-optimized functions.
+    """Base class for feature generators that use Numba-optimized functions.
+
     Applies a Numba-compiled function to sliding or expanding windows of data.
     """
 
@@ -162,14 +171,13 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name: str = None,
-    ):
-        """
-        Initializes the feature generator.
+        func_name: Optional[str] = None,
+    ) -> None:
+        """Initializes the feature generator.
 
         Args:
             columns (Union[List[str], str]): The columns to apply the function to.
-            window_type (WindowType): The type of window (expanding, rolling, etc.).
+            window_types (Union[List[WindowType], WindowType]): The type of windows (expanding, rolling, etc.).
             out_column_names (Union[List[str], str, None]): The names of the output columns.
             func_name (str): The name of the function (used to generate output column names if not provided).
         """
@@ -178,7 +186,8 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         # Generate out_column_names if not provided
         if self.out_column_names is None:
             if func_name is None:
-                raise ValueError("func_name must be provided if out_column_names is None")
+                msg = "func_name must be provided if out_column_names is None"
+                raise ValueError(msg)
             self.out_column_names = [
                 f"{column}_{func_name}_{window_type.suffix}"
                 for column in self.columns
@@ -194,8 +203,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         func: Callable,
         lens: np.ndarray,
     ) -> np.ndarray:
-        """
-        Applies a function to sliding or expanding windows of a feature array.
+        """Applies a function to sliding or expanding windows of a feature array.
 
         Args:
             feature (np.ndarray): The input feature array.
@@ -215,9 +223,8 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
 
     @abstractmethod
     @numba.njit
-    def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Abstract method defining the Numba-compiled function to apply to each window.
+    def _numba_func(self: np.ndarray) -> np.ndarray:
+        """Abstract method defining the Numba-compiled function to apply to each window.
 
         Args:
             xs (np.ndarray): The input window.
@@ -240,27 +247,28 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
 
         # Apply the function to the feature array
         feature_array = dataset.data[column].to_numpy()
-        result_array = self.apply_func_to_full_window(
-            feature=feature_array, func=self._numba_func, lens=lens, **self.numba_kwargs
+        return self.apply_func_to_full_window(
+            feature=feature_array,
+            func=self._numba_func,
+            lens=lens,
+            **self.numba_kwargs,
         )
-
-        return result_array
 
 
 class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         func_name: str = "sum",
-    ):
-        """
-        Initializes the feature generator.
+    ) -> None:
+        """Initializes the feature generator.
 
         Args:
             columns (Union[List[str], str]): The columns to apply the function to.
-            window_type (WindowType): The type of window (expanding, rolling, etc.).
+            window_types (Union[List[WindowType], WindowType]): The type of windows (expanding, rolling, etc.).
             out_column_names (Union[List[str], str, None]): The names of the output columns.
             func_name (str): The name of the function (used to generate output column names if not provided).
 
@@ -275,7 +283,8 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
 
         if out_column_names is None:
             if func_name is None:
-                raise ValueError("func_name must be provided if out_column_names is None")
+                msg = "func_name must be provided if out_column_names is None"
+                raise ValueError(msg)
             self.out_column_names = [
                 f"{column}_{func_name}_{window_type.suffix}"
                 for column in self.columns
@@ -286,7 +295,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         else:
             self.out_column_names = out_column_names
 
-    def transform_for_window_type(self, dataset, column, window_type):
+    def transform_for_window_type(self, dataset: TSDataset, column: str, window_type: WindowBase) -> np.ndarray:
         lens = calculate_window_lengths(
             dataset=dataset,
             window_type=window_type,
@@ -295,7 +304,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         # Apply the function to the feature array
         feature_array = dataset.data[column].to_numpy()
 
-        ts_lens = calculate_length_for_each_time_series(dataset._get_numeric_id_column_values())
+        ts_lens = calculate_length_for_each_time_series(dataset.get_numeric_id_column_values())
 
         return self.process_all_ts(
             feature=feature_array,

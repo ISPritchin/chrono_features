@@ -14,7 +14,7 @@ def sample_dataset() -> TSDataset:
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1, 2, 3, 4, 5, 6],
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
@@ -119,7 +119,7 @@ def test_sum_custom_out_column_names(sample_dataset: TSDataset) -> None:
 
 
 @pytest.mark.parametrize("use_prefix_sum_optimization", [True, False])
-def test_sum_multiple_window_types(sample_dataset: TSDataset, use_prefix_sum_optimization: bool) -> None:
+def test_sum_multiple_window_types(sample_dataset: TSDataset, *, use_prefix_sum_optimization: bool) -> None:
     sum_transformer = Sum(
         use_prefix_sum_optimization=use_prefix_sum_optimization,
         columns="value",
@@ -143,7 +143,7 @@ def test_sum_with_nan_values():
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1.0, np.nan, 3, 4, 5, np.nan],
-        }
+        },
     )
     dataset_with_nan = TSDataset(data_with_nan, id_column_name="id", ts_column_name="timestamp")
 

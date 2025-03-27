@@ -15,7 +15,7 @@ def sample_dataset() -> TSDataset:
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1, 3, 6, 4, 5, 8],  # Changes: +2, +3, +1, +3
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 

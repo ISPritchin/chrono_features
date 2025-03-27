@@ -10,8 +10,7 @@ from chrono_features.window_type import WindowBase, WindowType
 
 @numba.njit
 def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
-    """
-    Process expanding window maximum calculation with Numba optimization.
+    """Process expanding window maximum calculation with Numba optimization.
 
     Args:
         feature (np.ndarray): Array of feature values.
@@ -35,8 +34,7 @@ def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
 
 @numba.njit
 def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """
-    Process dynamic window maximum calculation with Numba optimization.
+    """Process dynamic window maximum calculation with Numba optimization.
 
     Args:
         feature (np.ndarray): Array of feature values.
@@ -64,8 +62,8 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
 
 @numba.njit
 def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """
-    Process rolling window maximum calculation with Numba optimization.
+    """Process rolling window maximum calculation with Numba optimization.
+
     For rolling windows, we use the same implementation as dynamic windows.
 
     Args:
@@ -80,19 +78,19 @@ def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
 
 
 class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
-    """
-    Maximum feature generator with optimized implementation for different window types.
+    """Maximum feature generator with optimized implementation for different window types.
+
     Uses specialized algorithms for each window type to improve performance.
     """
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[str] | WindowType,
         out_column_names: list[str] | str | None = None,
-    ):
-        """
-        Initialize the optimized maximum feature generator.
+    ) -> None:
+        """Initialize the optimized maximum feature generator.
 
         Args:
             columns: Columns to calculate maximum for.
@@ -113,8 +111,7 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         lens: np.ndarray,
         window_type: WindowBase,
     ) -> np.ndarray:
-        """
-        Process all time series with the appropriate algorithm based on window type.
+        """Process all time series with the appropriate algorithm based on window type.
 
         Args:
             feature: Array of feature values.
@@ -134,12 +131,13 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
             return process_rolling(feature=feature, lens=lens, ts_lens=ts_lens)
         if isinstance(window_type, WindowType.DYNAMIC):
             return process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
-        raise ValueError("Unsupported window type")
+        msg = "Unsupported window type"
+        raise ValueError(msg)
 
 
 class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Maximum feature generator using the standard implementation.
+    """Maximum feature generator using the standard implementation.
+
     Uses the base class's window processing logic with a simple max function.
     """
 
@@ -148,10 +146,9 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="max",
-    ):
-        """
-        Initialize the standard maximum feature generator.
+        func_name: str = "max",
+    ) -> None:
+        """Initialize the standard maximum feature generator.
 
         Args:
             columns: Columns to calculate maximum for.
@@ -169,8 +166,7 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the maximum value in the input array.
+        """Calculate the maximum value in the input array.
 
         Args:
             xs: Input array.
@@ -182,20 +178,20 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
 
 class Max:
-    """
-    Factory class for creating maximum feature generators.
+    """Factory class for creating maximum feature generators.
+
     Provides a unified interface to create either optimized or standard implementations.
     """
 
     def __new__(
         cls,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         use_optimization: bool = False,
     ) -> MaxWithOptimization | MaxWithoutOptimization:
-        """
-        Create a maximum feature generator.
+        """Create a maximum feature generator.
 
         Args:
             columns: Columns to calculate maximum for.
@@ -212,9 +208,8 @@ class Max:
                 window_types=window_types,
                 out_column_names=out_column_names,
             )
-        else:
-            return MaxWithoutOptimization(
-                columns=columns,
-                window_types=window_types,
-                out_column_names=out_column_names,
-            )
+        return MaxWithoutOptimization(
+            columns=columns,
+            window_types=window_types,
+            out_column_names=out_column_names,
+        )

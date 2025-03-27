@@ -1,61 +1,76 @@
-import time
+from pathlib import Path
 
-import numpy as np
-import polars as pl
 import pytest
 
-from chrono_features import TSDataset, WindowType
+from chrono_features import WindowType
 from chrono_features.features import Max
-
-
-@pytest.fixture
-def large_dataset(n_ids=50, n_timestamps=10000) -> TSDataset:
-    ids = np.repeat(range(n_ids), n_timestamps)
-    timestamps = np.tile(np.arange(1, n_timestamps + 1), n_ids)
-    values = np.random.rand(n_ids * n_timestamps)
-    data = pl.DataFrame(
-        {
-            "id": ids,
-            "timestamp": timestamps,
-            "value": values,
-        }
-    )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+from tests.utils.performance import create_dataset, performance_comparison
 
 
 @pytest.mark.performance
-def test_performance_comparison(large_dataset: TSDataset) -> None:
-    max_transformer_without_opt = Max(
-        columns="value",
-        use_optimization=False,
-        window_types=WindowType.EXPANDING(),
-        out_column_names=["m2"],
+def test_performance_comparison() -> None:
+    """Test performance of Max feature with different window types and optimization settings across dataset sizes."""
+    # Define datasets to test
+    datasets = {
+        "medium": create_dataset(n_ids=50, n_timestamps=10000),
+        "large": create_dataset(n_ids=500, n_timestamps=10000),
+    }
+
+    # Create transformer instances directly
+    transformers = [
+        Max(
+            columns="value",
+            use_optimization=True,
+            window_types=WindowType.EXPANDING(),
+            out_column_names=["max_expanding"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=True,
+            window_types=WindowType.ROLLING(size=10),
+            out_column_names=["max_rolling_10"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=True,
+            window_types=WindowType.ROLLING(size=100),
+            out_column_names=["max_rolling_100"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=True,
+            window_types=WindowType.ROLLING(size=1000),
+            out_column_names=["max_rolling_1000"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=False,
+            window_types=WindowType.EXPANDING(),
+            out_column_names=["max_expanding"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=False,
+            window_types=WindowType.ROLLING(size=10),
+            out_column_names=["max_rolling_10"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=False,
+            window_types=WindowType.ROLLING(size=100),
+            out_column_names=["max_rolling_100"],
+        ),
+        Max(
+            columns="value",
+            use_optimization=False,
+            window_types=WindowType.ROLLING(size=1000),
+            out_column_names=["max_rolling_1000"],
+        ),
+    ]
+
+    # Run the performance comparison
+    performance_comparison(
+        datasets=datasets,
+        transformers=transformers,
+        output_xlsx_file_path=Path(__file__).absolute().parent / "performance_results.xlsx",
     )
-
-    start_time = time.time()
-    transformed_dataset_without_opt = max_transformer_without_opt.transform(large_dataset)
-    time_without_opt = time.time() - start_time
-
-    max_transformer_with_opt = Max(
-        columns="value",
-        use_optimization=True,
-        window_types=WindowType.EXPANDING(),
-        out_column_names=["m1"],
-    )
-
-    start_time = time.time()
-    transformed_dataset_with_opt = max_transformer_with_opt.transform(large_dataset)
-    time_with_opt = time.time() - start_time
-
-    result_with_opt = transformed_dataset_with_opt.data["m1"].to_numpy()
-    result_without_opt = transformed_dataset_without_opt.data["m2"].to_numpy()
-
-    np.testing.assert_array_almost_equal(result_with_opt, result_without_opt, decimal=3)
-
-    print(f"\nExecution time with optimization: {time_with_opt:.4f} seconds")
-    print(f"Execution time without optimization: {time_without_opt:.4f} seconds")
-
-    if time_with_opt < time_without_opt:
-        print("Optimization is faster.")
-    else:
-        print("Optimization did not provide a speed advantage.")

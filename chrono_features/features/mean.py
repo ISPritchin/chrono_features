@@ -1,4 +1,4 @@
-from typing import Iterable
+from collections.abc import Iterable
 
 import numba
 import numpy as np
@@ -8,20 +8,20 @@ from chrono_features.window_type import WindowType
 
 
 class Mean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Mean feature generator for time series data.
+    """Mean feature generator for time series data.
+
     Calculates the arithmetic mean of values within specified windows.
     """
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="mean",
-    ):
-        """
-        Initialize the mean feature generator.
+        func_name: str = "mean",
+    ) -> None:
+        """Initialize the mean feature generator.
 
         Args:
             columns: Columns to calculate mean for.
@@ -39,8 +39,7 @@ class Mean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the arithmetic mean of the input array.
+        """Calculate the arithmetic mean of the input array.
 
         Args:
             xs: Input array.
@@ -52,21 +51,20 @@ class Mean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
 
 class SimpleMovingAverage:
-    """
-    Factory class for creating simple moving average feature generators.
+    """Factory class for creating simple moving average feature generators.
+
     Creates a Mean feature generator with a rolling window of specified size.
     """
 
     def __new__(
-        self,
-        columns: str | list[str],
+        cls,
         *,
+        columns: str | list[str],
         window_size: int,
         out_column_names: str | list[str] | None = None,
         only_full_window: bool = False,
     ) -> Mean:
-        """
-        Create a simple moving average feature generator.
+        """Create a simple moving average feature generator.
 
         Args:
             columns: Columns to calculate moving average for.
@@ -95,21 +93,21 @@ class SimpleMovingAverage:
 
 
 class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Weighted mean feature generator for time series data.
+    """Weighted mean feature generator for time series data.
+
     Calculates the weighted arithmetic mean of values within specified windows.
     """
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         weights: np.ndarray | None = None,
         out_column_names: list[str] | str | None = None,
         func_name: str = "weighted_mean",
-    ):
-        """
-        Initialize the weighted mean feature generator.
+    ) -> None:
+        """Initialize the weighted mean feature generator.
 
         Args:
             columns: Columns to calculate weighted mean for.
@@ -129,7 +127,8 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         )
 
         if weights is None:
-            raise ValueError("Weights cannot be None")
+            msg = "Weights cannot be None"
+            raise ValueError(msg)
 
         self.weights = weights
         self.numba_kwargs = {"weights": weights}
@@ -142,8 +141,7 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         lens: np.ndarray,
         weights: np.ndarray,
     ) -> np.ndarray:
-        """
-        Apply a weighted function to sliding or expanding windows of a feature array.
+        """Apply a weighted function to sliding or expanding windows of a feature array.
 
         Args:
             feature: Input feature array.
@@ -170,8 +168,7 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray, weights: np.ndarray) -> np.ndarray:
-        """
-        Calculate the weighted mean of the input array.
+        """Calculate the weighted mean of the input array.
 
         Args:
             xs: Input array.
@@ -184,22 +181,21 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
 
 class WeightedMovingAverage:
-    """
-    Factory class for creating weighted moving average feature generators.
+    """Factory class for creating weighted moving average feature generators.
+
     Creates a WeightedMean feature generator with a rolling window of specified size.
     """
 
     def __new__(
         cls,
-        columns: str | list[str],
         *,
+        columns: str | list[str],
         window_size: int,
         weights: np.ndarray | list[float],
         out_column_names: str | list[str] | None = None,
         only_full_window: bool = False,
     ) -> Mean | WeightedMean:
-        """
-        Create a weighted moving average feature generator.
+        """Create a weighted moving average feature generator.
 
         Args:
             columns: Columns to calculate weighted moving average for.
@@ -221,7 +217,8 @@ class WeightedMovingAverage:
             return ValueError
 
         if len(weights) != window_size:
-            raise ValueError(f"Length of weights must match window_size. Got {len(weights)}, expected {window_size}")
+            msg = f"Length of weights must match window_size. Got {len(weights)}, expected {window_size}"
+            raise ValueError(msg)
 
         return WeightedMean(
             columns=columns,

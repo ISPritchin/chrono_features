@@ -15,7 +15,7 @@ def sample_dataset() -> TSDataset:
             "id": [1, 1, 1, 2, 2, 2],
             "timestamp": [1, 2, 3, 1, 2, 3],
             "value": [1, 2, 3, 4, 5, 6],  # Values to calculate energy from
-        }
+        },
     )
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 

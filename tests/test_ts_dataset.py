@@ -28,7 +28,7 @@ def test_sort_with_non_numeric_id():
     dataset = TSDataset(data=data, id_column_name="id", ts_column_name="ts")
 
     expected_sorted_data = pl.DataFrame(
-        data={"id": ["a", "a", "b", "b"], "ts": [0, 1, 2, 3], "value": [40, 30, 20, 10]}
+        data={"id": ["a", "a", "b", "b"], "ts": [0, 1, 2, 3], "value": [40, 30, 20, 10]},
     )
 
     assert dataset.data.equals(other=expected_sorted_data)
@@ -49,7 +49,7 @@ def test_add_feature():
             "ts": [100, 200, 300],
             "value": [10, 20, 30],
             "new_feature": [100, 200, 300],
-        }
+        },
     )
 
     assert dataset.data.equals(other=expected_data)

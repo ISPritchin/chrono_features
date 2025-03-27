@@ -6,20 +6,20 @@ from chrono_features.window_type import WindowType
 
 
 class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Median feature generator for time series data.
+    """Median feature generator for time series data.
+
     Calculates the median value of data points within specified windows.
     """
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="median",
-    ):
-        """
-        Initialize the median feature generator.
+        func_name: str = "median",
+    ) -> None:
+        """Initialize the median feature generator.
 
         Args:
             columns: Columns to calculate median for.
@@ -31,14 +31,13 @@ class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
-            func_name="median",
+            func_name=func_name,
         )
 
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the median value of the input array.
+        """Calculate the median value of the input array.
 
         Args:
             xs: Input array.

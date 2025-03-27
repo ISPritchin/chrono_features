@@ -17,7 +17,7 @@ def sample_dataset():
             "id": [1, 1, 1, 1, 1, 2, 2, 2, 2],
             "value": [1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 30.0, 40.0],
             "timestamp": range(9),
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
@@ -54,21 +54,21 @@ def test_sum_with_prefix_optimization(sample_dataset):
     result = pipeline.fit_transform(sample_dataset)
 
     assert "value_sum_expanding" in result.data.columns
-    # Проверяем корректность вычисления суммы
+    # Check sum calculation correctness
     expected_values = [1, 3, 6, 10, 15, 10, 30, 60, 100]
     assert np.allclose(result.data["value_sum_expanding"].fill_nan(-1).to_numpy(), expected_values, equal_nan=True)
 
 
 def test_weighted_moving_average(sample_dataset):
     """Test WeightedMovingAverage transformation"""
-    weights = np.array([0.1, 0.3, 0.6])  # Веса для WMA
+    weights = np.array([0.1, 0.3, 0.6])  # Weights for WMA
     wma = WeightedMovingAverage(columns="value", window_size=3, weights=weights)
     pipeline = TransformationPipeline([wma], verbose=False)
 
     result = pipeline.fit_transform(sample_dataset)
 
     assert "value_weighted_moving_average_rolling_3" in result.data.columns
-    # Проверяем первое корректное значение (третий элемент)
+    # Check first valid value (third element)
     expected = (0.1 * 1 + 0.3 * 2 + 0.6 * 3) / (0.1 + 0.3 + 0.6)
     assert np.isclose(result.data["value_weighted_moving_average_rolling_3"][2], expected)
 
@@ -87,7 +87,7 @@ def test_multiple_different_transformations(sample_dataset):
     expected_columns = {"value_median_rolling_2", "value_sum_expanding", "value_weighted_moving_average_rolling_3"}
     assert expected_columns.issubset(set(result.data.columns))
 
-    # Проверяем порядок трансформаций
+    # Check transformation order
     assert pipeline.get_transformation_names() == ["Median", "SumWithoutOptimization", "WeightedMean"]
 
 
@@ -99,7 +99,7 @@ def empty_dataset():
             "id": [],
             "value": [],
             "timestamp": [],
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
@@ -113,7 +113,7 @@ def multi_column_dataset():
             "price": [10.0, 20.0, 30.0, 15.0, 25.0, 35.0],
             "volume": [100, 200, 300, 150, 250, 350],
             "timestamp": range(6),
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
@@ -283,13 +283,13 @@ def test_self_addition():
     # Assert
     assert len(combined.transformations) == 2
     assert combined is not pipeline
-    assert combined.transformations[0] is not pipeline.transformations[0]  # проверка deepcopy
+    assert combined.transformations[0] is not pipeline.transformations[0]  # deepcopy check
 
 
 def test_invalid_transformation_type():
     """Test passing invalid transformation type"""
     with pytest.raises(TypeError) as excinfo:
-        TransformationPipeline(["not_a_transformation"])  # некорректный тип
+        TransformationPipeline(["not_a_transformation"])  # incorrect type
 
     assert "must be a FeatureGenerator" in str(excinfo.value)
 
@@ -313,7 +313,7 @@ def test_conflicting_column_names(multi_column_dataset):
         [
             Sum(columns="price", window_types=WindowType.EXPANDING(), out_column_names="custom_name"),
             Median(columns="volume", window_types=WindowType.EXPANDING(), out_column_names="custom_name"),
-        ]
+        ],
     )
 
     # Act/Assert
@@ -338,7 +338,7 @@ def test_nonexistent_column(multi_column_dataset):
 def test_invalid_window_params():
     """Test invalid window parameters"""
     with pytest.raises(ValueError) as excinfo:
-        Sum(columns="price", window_types=WindowType.ROLLING(size=-1))  # отрицательный размер
+        Sum(columns="price", window_types=WindowType.ROLLING(size=-1))  # negative size
 
     assert "window size" in str(excinfo.value).lower()
 
@@ -351,7 +351,7 @@ def test_get_transformation_names():
             Median(columns="price", window_types=WindowType.ROLLING(size=2)),
             Sum(columns="volume", window_types=WindowType.EXPANDING()),
             WeightedMovingAverage(columns="price", window_size=3, weights=[0.1, 0.3, 0.6]),
-        ]
+        ],
     )
 
     # Act
@@ -362,7 +362,7 @@ def test_get_transformation_names():
     assert len(names) == 3
 
 
-def test_clone_creates_independent_copy(multi_column_dataset):
+def test_clone_creates_independent_copy():
     """Test clone() creates truly independent copy"""
     # Arrange
     original = TransformationPipeline([Sum(columns="price", window_types=WindowType.EXPANDING())])
@@ -430,7 +430,7 @@ def test_complex_integration(multi_column_dataset):
     result = pipeline.fit_transform(multi_column_dataset)
 
     # Assert
-    # Проверяем все ожидаемые колонки
+    # Check all expected columns
     expected_columns = {
         "price_sum_expanding",
         "price_sum_rolling_2",
@@ -451,7 +451,7 @@ def test_large_dataset_performance():
             "id": np.repeat(np.arange(100), 1000),
             "value": np.random.normal(0, 1, 100000),
             "timestamp": np.tile(np.arange(1000), 100),
-        }
+        },
     )
     large_dataset = TSDataset(large_data, id_column_name="id", ts_column_name="timestamp")
 
@@ -463,11 +463,12 @@ def test_large_dataset_performance():
         verbose=False,
     )
 
-    # Act/Assert (прежде всего проверяем что выполняется без ошибок)
+    # Act/Assert (primarily check that it executes without errors)
     result = pipeline.fit_transform(large_dataset)
 
-    # Проверяем корректность вычислений для первых 5 элементов первой серии
+    # Check calculation correctness for first 5 elements of first series
     first_series = result.data.filter(pl.col("id") == 0)
     assert np.allclose(
-        first_series["value_sum_expanding"][:5].to_numpy(), np.cumsum(large_data["value"][:5].to_numpy())
+        first_series["value_sum_expanding"][:5].to_numpy(),
+        np.cumsum(large_data["value"][:5].to_numpy()),
     )

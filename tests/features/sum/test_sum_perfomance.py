@@ -1,69 +1,76 @@
-import time
+from pathlib import Path
 
-import numpy as np
-import polars as pl
 import pytest
 
-from chrono_features.features._base import WindowType
-from chrono_features.features.sum import Sum
-from chrono_features.ts_dataset import TSDataset
-
-
-@pytest.fixture
-def large_dataset(n_ids=50, n_timestamps=1000000) -> TSDataset:
-    # Create a large dataset for performance testing
-    ids = np.repeat(range(n_ids), n_timestamps)
-    timestamps = np.tile(np.arange(1, n_timestamps + 1), n_ids)
-    values = np.random.rand(n_ids * n_timestamps)  # Random values
-    data = pl.DataFrame(
-        {
-            "id": ids,
-            "timestamp": timestamps,
-            "value": values,
-        }
-    )
-    return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+from chrono_features import WindowType
+from chrono_features.features import Sum
+from tests.utils.performance import create_dataset, performance_comparison
 
 
 @pytest.mark.performance
-def test_performance_comparison(large_dataset: TSDataset) -> None:
-    # window_size = 50
-    # Test the method with optimization
-    # Test the method without optimization
-    sum_transformer_without_opt = Sum(
-        columns="value",
-        use_prefix_sum_optimization=False,
-        window_types=WindowType.EXPANDING(),
-        out_column_names=["s2"],
+def test_performance_comparison() -> None:
+    """Test performance of Max feature with different window types and optimization settings across dataset sizes."""
+    # Define datasets to test
+    datasets = {
+        "medium": create_dataset(n_ids=50, n_timestamps=10000),
+        "large": create_dataset(n_ids=500, n_timestamps=10000),
+    }
+
+    # Create transformer instances directly
+    transformers = [
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=True,
+            window_types=WindowType.EXPANDING(),
+            out_column_names=["max_expanding"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=True,
+            window_types=WindowType.ROLLING(size=10),
+            out_column_names=["max_rolling_10"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=True,
+            window_types=WindowType.ROLLING(size=100),
+            out_column_names=["max_rolling_100"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=True,
+            window_types=WindowType.ROLLING(size=1000),
+            out_column_names=["max_rolling_1000"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=False,
+            window_types=WindowType.EXPANDING(),
+            out_column_names=["max_expanding"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=False,
+            window_types=WindowType.ROLLING(size=10),
+            out_column_names=["max_rolling_10"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=False,
+            window_types=WindowType.ROLLING(size=100),
+            out_column_names=["max_rolling_100"],
+        ),
+        Sum(
+            columns="value",
+            use_prefix_sum_optimization=False,
+            window_types=WindowType.ROLLING(size=1000),
+            out_column_names=["max_rolling_1000"],
+        ),
+    ]
+
+    # Run the performance comparison
+    performance_comparison(
+        datasets=datasets,
+        transformers=transformers,
+        output_xlsx_file_path=Path(__file__).absolute().parent / "performance_results.xlsx",
     )
-
-    start_time = time.time()
-    transformed_dataset_without_opt = sum_transformer_without_opt.transform(large_dataset)
-    time_without_opt = time.time() - start_time
-
-    sum_transformer_with_opt = Sum(
-        columns="value",
-        use_prefix_sum_optimization=True,
-        window_types=WindowType.EXPANDING(),
-        out_column_names=["s1"],
-    )
-
-    start_time = time.time()
-    transformed_dataset_with_opt = sum_transformer_with_opt.transform(large_dataset)
-    time_with_opt = time.time() - start_time
-
-    # Verify that the results match
-    result_with_opt = transformed_dataset_with_opt.data["s1"].to_numpy()
-    result_without_opt = transformed_dataset_without_opt.data["s2"].to_numpy()
-
-    np.testing.assert_array_almost_equal(result_with_opt, result_without_opt, decimal=3)
-
-    # Print execution times
-    print(f"\nExecution time with optimization: {time_with_opt:.4f} seconds")
-    print(f"Execution time without optimization: {time_without_opt:.4f} seconds")
-
-    # Compare performance
-    if time_with_opt < time_without_opt:
-        print("Optimization is faster.")
-    else:
-        print("Optimization did not provide a speed advantage.")

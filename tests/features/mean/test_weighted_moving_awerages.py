@@ -13,7 +13,7 @@ def sample_dataset():
             "id": [1, 1, 1, 1, 1, 2, 2, 2, 2],
             "value": [1.0, 2.0, 3.0, 4.0, 5.0, 10.0, 20.0, 30.0, 40.0],
             "timestamp": range(9),
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 

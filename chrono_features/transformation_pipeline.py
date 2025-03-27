@@ -1,5 +1,7 @@
+# ruff: noqa: T201
+
 from copy import deepcopy
-from typing import List, Union
+from typing import Union
 
 from chrono_features.features._base import FeatureGenerator
 from chrono_features.ts_dataset import TSDataset
@@ -44,7 +46,7 @@ class TransformationPipeline:
         >>> transformed_dataset = pipeline.fit_transform(dataset)
     """
 
-    def __init__(self, transformations: List[FeatureGenerator], verbose: bool = True):
+    def __init__(self, transformations: list[FeatureGenerator], *, verbose: bool = False) -> None:
         """Initializes the transformation pipeline.
 
         Args:
@@ -55,11 +57,12 @@ class TransformationPipeline:
         self.verbose = verbose
         self._validate_transformations()
 
-    def _validate_transformations(self):
+    def _validate_transformations(self) -> None:
         """Validates that all pipeline steps are proper FeatureGenerator instances."""
         for i, trans in enumerate(self.transformations):
             if not isinstance(trans, FeatureGenerator):
-                raise TypeError(f"Transformation #{i+1} must be a FeatureGenerator, got {type(trans)}")
+                msg = f"Transformation #{i+1} must be a FeatureGenerator, got {type(trans)}"
+                raise TypeError(msg)
 
     def fit_transform(self, dataset: TSDataset) -> TSDataset:
         """Applies all transformations sequentially to the input dataset.
@@ -74,7 +77,8 @@ class TransformationPipeline:
             TypeError: If input is not a TSDataset instance.
         """
         if not isinstance(dataset, TSDataset):
-            raise TypeError("Input must be a TSDataset object")
+            msg = "Input must be a TSDataset object"
+            raise TypeError(msg)
 
         current_dataset = dataset.clone()
 
@@ -105,13 +109,13 @@ class TransformationPipeline:
             TypeError: If other is not a pipeline or transformation.
         """
         if isinstance(other, FeatureGenerator):
-            return TransformationPipeline(self.transformations + [deepcopy(other)])
-        elif isinstance(other, TransformationPipeline):
+            return TransformationPipeline([*self.transformations, deepcopy(other)])
+        if isinstance(other, TransformationPipeline):
             return TransformationPipeline(deepcopy(self.transformations) + deepcopy(other.transformations))
-        else:
-            raise TypeError(f"Cannot add {type(other)} to TransformationPipeline")
+        msg = f"Cannot add {type(other)} to TransformationPipeline"
+        raise TypeError(msg)
 
-    def get_transformation_names(self) -> List[str]:
+    def get_transformation_names(self) -> list[str]:
         """Returns names of all transformations in the pipeline.
 
         Returns:

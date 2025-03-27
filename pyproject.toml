@@ -11,7 +11,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-version = "0.0.8"
+version = "0.0.9"
 
 keywords = ["timeseries", "features"]
 
@@ -21,8 +21,147 @@ keywords = ["timeseries", "features"]
 [tool.black]
 line-length = 120
 
+# Ruff configuration
+[tool.ruff]
+# Target Python version
+target-version = "py39"
+# Line length to match black
+line-length = 120
+
+[tool.ruff.lint]
+# Enable all recommended rules by default
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "UP",  # pyupgrade (upgrade syntax to newer Python)
+    "B",   # flake8-bugbear (detect bugs and design issues)
+    "SIM", # flake8-simplify (simplify code)
+    "C90", # mccabe (complexity)
+    "N",   # pep8-naming (naming conventions)
+    "D",   # pydocstyle (docstring style)
+    "ANN", # flake8-annotations (type annotations)
+    "S",   # flake8-bandit (security)
+    "BLE", # flake8-blind-except (blind except statements)
+    "FBT", # flake8-boolean-trap (boolean trap parameters)
+    "A",   # flake8-builtins (shadowing builtins)
+    "COM", # flake8-commas (trailing commas)
+    "C4",  # flake8-comprehensions (comprehension improvements)
+    "DTZ", # flake8-datetimez (datetime usage)
+    "T10", # flake8-debugger (debugger statements)
+    "EM",  # flake8-errmsg (error message formatting)
+    "EXE", # flake8-executable (executable permissions)
+    "ISC", # flake8-implicit-str-concat (implicit string concatenation)
+    "ICN", # flake8-import-conventions (import conventions)
+    "G",   # flake8-logging-format (logging format)
+    "INP", # flake8-no-pep420 (implicit namespace packages)
+    "PIE", # flake8-pie (miscellaneous lints)
+    "T20", # flake8-print (print statements)
+    "PYI", # flake8-pyi (type stub files)
+    "PT",  # flake8-pytest-style (pytest style)
+    "Q",   # flake8-quotes (quotes style)
+    "RSE", # flake8-raise (raise statements)
+    "RET", # flake8-return (return statements)
+    "SLF", # flake8-self (self references)
+    "SLOT", # flake8-slots (slots usage)
+    "TID", # flake8-tidy-imports (import tidying)
+    "TCH", # flake8-type-checking (type checking)
+    "ARG", # flake8-unused-arguments (unused arguments)
+    "PTH", # flake8-use-pathlib (pathlib usage)
+    "ERA", # eradicate (commented out code)
+    "PD",  # pandas-vet (pandas usage)
+    "PGH", # pygrep-hooks (simple regex-based checks)
+    "PL",  # pylint (pylint checks)
+    "TRY", # tryceratops (exception handling)
+    "NPY", # numpy-specific rules
+    "RUF", # ruff-specific rules
+]
+
+# Ignore specific rules
+ignore = [
+    'D100',   # Missing docstring in public module,
+    'D105',   # Missing docstring in magic method
+    'D107',   # Missing docstring in `__init__`
+    'ERA001', # ERA001 Found commented-out code
+    'NPY002', # Replace legacy `np.random.rand` call with `np.random.Generator`
+    'PT011',  #`pytest.raises(ValueError)` is too broad, set the `match` parameter or use a more specific exception
+    'D104',   # Missing docstring in public package
+]
+
+# Allow autofix for all enabled rules (when `--fix` is passed)
+fixable = ["ALL"]
+unfixable = []
+
+# Allow imports to be organized into groups with blank lines
+[tool.ruff.lint.isort]
+# Group imports into sections: future, standard library, third-party, first-party, local
+known-first-party = ["chrono_features"]
+# Number of blank lines between import sections
+lines-after-imports = 2
+# Sort by import name, not by line length
+length-sort = false
+# Add a trailing comma to import statements
+force-single-line = false
+# Use parentheses for line continuation
+force-wrap-aliases = true
+
+# Configure flake8-quotes
+[tool.ruff.lint.flake8-quotes]
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
+
+# Configure flake8-tidy-imports
+[tool.ruff.lint.flake8-tidy-imports]
+# Disallow relative imports
+ban-relative-imports = "all"
+
+# Configure flake8-unused-arguments
+[tool.ruff.lint.flake8-unused-arguments]
+# Allow unused arguments that start with underscore
+ignore-variadic-names = true
+
+# Configure mccabe complexity checker
+[tool.ruff.lint.mccabe]
+# Maximum cyclomatic complexity allowed
+max-complexity = 10
+
+# Configure pydocstyle
+[tool.ruff.lint.pydocstyle]
+# Use Google-style docstrings
+convention = "google"
+
+# Configure Pylint
+[tool.ruff.lint.pylint]
+# Maximum number of arguments for functions/methods
+max-args = 8
+# Maximum number of locals for functions/methods
+max-locals = 15
+# Maximum number of returns for functions/methods
+max-returns = 6
+# Maximum number of branches for functions/methods
+max-branches = 12
+# Maximum number of statements in functions/methods
+max-statements = 50
+# Maximum nested block depth
+max-nested-blocks = 5
+
+# Configure per-file ignores
+[tool.ruff.lint.per-file-ignores]
+# Ignore specific rules in test files
+"tests/**/*.py" = [
+    "D",       # No need for docstrings in tests
+    "ANN",     # No need for type annotations in tests
+    "S101",    # Allow assert in tests
+    "PLR2004", # Allow magic numbers in tests
+    "SLF001",  # Private member accessed: `_numba_func`
+]
+# Ignore specific rules in __init__.py files
+"__init__.py" = [
+    "F401",  # Allow unused imports in __init__.py
+]
+
 [tool.pytest.ini_options]
 markers = [
     "performance: for compare several implementations"
 ]
-addopts = "-v -s --strict-markers"
+addopts = "-v -s --strict-markers --testmon -m 'not performance'"

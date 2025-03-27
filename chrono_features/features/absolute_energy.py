@@ -6,8 +6,7 @@ from chrono_features.window_type import WindowType
 
 
 class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """
-    Absolute energy feature generator for time series data.
+    """Absolute energy feature generator for time series data.
 
     Calculates the sum of squared values within specified windows. This feature
     measures the overall energy or magnitude of a time series segment, giving
@@ -16,13 +15,13 @@ class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTS
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name="absolute_energy",
-    ):
-        """
-        Initialize the absolute energy feature generator.
+        func_name: str = "absolute_energy",
+    ) -> None:
+        """Initialize the absolute energy feature generator.
 
         Args:
             columns: Columns to calculate absolute energy for.
@@ -40,8 +39,7 @@ class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTS
     @staticmethod
     @numba.njit
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """
-        Calculate the absolute energy of the input array.
+        """Calculate the absolute energy of the input array.
 
         Args:
             xs (np.ndarray): The input window.
@@ -53,8 +51,7 @@ class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTS
 
 
 class AbsoluteEnergy:
-    """
-    Factory class for creating absolute energy feature generators.
+    """Factory class for creating absolute energy feature generators.
 
     Provides a unified interface to create absolute energy implementations.
 
@@ -85,12 +82,12 @@ class AbsoluteEnergy:
 
     def __new__(
         cls,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> AbsoluteEnergyWithoutOptimization:
-        """
-        Create an absolute energy feature generator.
+        """Create an absolute energy feature generator.
 
         Args:
             columns: Columns to calculate absolute energy for.

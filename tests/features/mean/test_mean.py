@@ -16,7 +16,7 @@ def sample_ts_dataset() -> TSDataset:
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10, 20, 30, 40, 50, 60],
-        }
+        },
     )
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
@@ -143,7 +143,7 @@ def ts_dataset_with_nan() -> TSDataset:
             "id": [1, 1, 1, 2, 2, 3],
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value": [10.0, np.nan, 30.0, 40.0, 50.0, np.nan],
-        }
+        },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
@@ -157,7 +157,7 @@ def ts_dataset_multiple_columns() -> TSDataset:
             "timestamp": [1, 2, 3, 1, 2, 1],
             "value1": [10, 20, 30, 40, 50, 60],
             "value2": [100, 200, 300, 400, 500, 600],
-        }
+        },
     )
     return TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 

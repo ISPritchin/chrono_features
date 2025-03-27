@@ -1,3 +1,5 @@
+# ruff: noqa: D102
+
 from abc import ABC, abstractmethod
 
 
@@ -52,7 +54,7 @@ class WindowType:
     class ROLLING(WindowBase):
         """A window with a fixed size."""
 
-        def __init__(self, size: int, only_full_window: bool = True):
+        def __init__(self, size: int, *, only_full_window: bool = True) -> None:
             """Initializes the ROLLING window.
 
             Args:
@@ -63,7 +65,8 @@ class WindowType:
                 ValueError: If size is less than or equal to 0
             """
             if size <= 0:
-                raise ValueError("Window size must be greater than 0")
+                msg = "Window size must be greater than 0"
+                raise ValueError(msg)
             self.size = size
             self.only_full_window = only_full_window
 
@@ -80,7 +83,7 @@ class WindowType:
     class DYNAMIC(WindowBase):
         """A window with a dynamic size based on a column."""
 
-        def __init__(self, len_column_name: str):
+        def __init__(self, len_column_name: str) -> None:
             self.len_column_name = len_column_name
 
         @property
