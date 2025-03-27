@@ -135,6 +135,10 @@ Windows are calculated separately for each unique ID in your dataset:
 You can combine multiple transformers into a pipeline for more efficient processing:
 
 ```python
+import pandas as pd
+import polars as pl
+from chrono_features import WindowType
+from chrono_features.features import Sum, Median, Max
 from chrono_features.transformation_pipeline import TransformationPipeline
 
 # Create a pipeline with multiple transformers
@@ -151,7 +155,6 @@ pipeline = TransformationPipeline(
 transformed_dataset = pipeline.fit_transform(dataset)
 
 # Or apply directly to a polars DataFrame
-import polars as pl
 pl_df = pl.DataFrame({
     "id": [1, 1, 1, 2, 2, 2],
     "timestamp": [1, 2, 3, 1, 2, 3],
@@ -166,7 +169,6 @@ transformed_pl_df = pipeline.fit_transform(
 )
 
 # Or apply to a pandas DataFrame
-import pandas as pd
 pd_df = pd.DataFrame({
     "id": [1, 1, 1, 2, 2, 2],
     "timestamp": [1, 2, 3, 1, 2, 3],
