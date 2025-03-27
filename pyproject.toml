@@ -11,7 +11,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-version = "0.0.9"
+version = "0.0.10"
 
 keywords = ["timeseries", "features"]
 
@@ -86,6 +86,7 @@ ignore = [
     'NPY002', # Replace legacy `np.random.rand` call with `np.random.Generator`
     'PT011',  #`pytest.raises(ValueError)` is too broad, set the `match` parameter or use a more specific exception
     'D104',   # Missing docstring in public package
+    'RET504', # 
 ]
 
 # Allow autofix for all enabled rules (when `--fix` is passed)

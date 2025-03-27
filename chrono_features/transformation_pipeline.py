@@ -112,7 +112,7 @@ class TransformationPipeline:
                 current_dataset = transformation.transform(current_dataset)
 
                 if self.verbose:
-                    new_cols = set(current_dataset.data.columns) - set(data.data.columns)
+                    new_cols = sorted(set(current_dataset.data.columns) - set(data.data.columns))
                     print(f"  Added columns: {list(new_cols)}")
                     print(
                         f"  Dataset shape: {len(current_dataset.data)} rows, \
@@ -127,14 +127,7 @@ class TransformationPipeline:
                 msg = "When input is a DataFrame, id_column_name and ts_column_name must be provided"
                 raise TypeError(msg)
 
-            # Create a TSDataset from the DataFrame
-            dataset = TSDataset(data, id_column_name=id_column_name, ts_column_name=ts_column_name)
-
-            # Apply transformations
-            transformed_dataset = self.fit_transform(dataset)
-
-            # Return the transformed DataFrame
-            return transformed_dataset.data
+            return self.fit_transform_polars(data, id_column_name, ts_column_name)
 
         # Case 3: Input is a pandas DataFrame
         if pd and isinstance(data, pd.DataFrame):
@@ -142,22 +135,12 @@ class TransformationPipeline:
                 msg = "When input is a DataFrame, id_column_name and ts_column_name must be provided"
                 raise TypeError(msg)
 
-            # Convert pandas DataFrame to polars
-            pl_df = pl.from_pandas(data)
-
-            # Create a TSDataset from the polars DataFrame
-            dataset = TSDataset(pl_df, id_column_name=id_column_name, ts_column_name=ts_column_name)
-
-            # Apply transformations
-            transformed_dataset = self.fit_transform(dataset)
-
-            # Convert back to pandas and return
-            return transformed_dataset.data.to_pandas()
+            return self.fit_transform_pandas(data, id_column_name, ts_column_name)
 
         msg = f"Unsupported input type: {type(data)}. Expected TSDataset, polars.DataFrame, or pandas.DataFrame"
         raise TypeError(msg)
 
-    def fit_transform_df(self, df: pl.DataFrame, id_column_name: str, ts_column_name: str) -> pl.DataFrame:
+    def fit_transform_polars(self, df: pl.DataFrame, id_column_name: str, ts_column_name: str) -> pl.DataFrame:
         """Applies all transformations sequentially to a polars DataFrame.
 
         This method creates a TSDataset from the input DataFrame and applies
@@ -211,14 +194,11 @@ class TransformationPipeline:
         # Convert pandas DataFrame to polars
         pl_df = pl.from_pandas(df)
 
-        # Create a TSDataset from the polars DataFrame
-        dataset = TSDataset(pl_df, id_column_name=id_column_name, ts_column_name=ts_column_name)
-
-        # Apply transformations
-        transformed_dataset = self.fit_transform(dataset)
+        # Use the polars method and convert back to pandas
+        result_pl = self.fit_transform_polars(pl_df, id_column_name, ts_column_name)
 
         # Convert back to pandas and return
-        return transformed_dataset.data.to_pandas()
+        return result_pl.to_pandas()
 
     def __add__(self, other: Union["TransformationPipeline", FeatureGenerator]) -> "TransformationPipeline":
         """Combines pipelines or adds a transformation using + operator.

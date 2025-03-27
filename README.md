@@ -45,6 +45,21 @@ transformed_dataset = max_transformer.transform(dataset)
 # View the result
 print(transformed_dataset.data)
 ```
+```output
+shape: (6, 4)
+┌─────┬───────────┬───────┬─────────────────────┐
+│ id  ┆ timestamp ┆ value ┆ value_max_expanding │
+│ --- ┆ ---       ┆ ---   ┆ ---                 │
+│ i64 ┆ i64       ┆ i64   ┆ f64                 │
+╞═════╪═══════════╪═══════╪═════════════════════╡
+│ 1   ┆ 1         ┆ 1     ┆ 1.0                 │
+│ 1   ┆ 2         ┆ 2     ┆ 2.0                 │
+│ 1   ┆ 3         ┆ 3     ┆ 3.0                 │
+│ 2   ┆ 1         ┆ 4     ┆ 4.0                 │
+│ 2   ┆ 2         ┆ 5     ┆ 5.0                 │
+│ 2   ┆ 3         ┆ 6     ┆ 6.0                 │
+└─────┴───────────┴───────┴─────────────────────┘
+```
 
 ## Core Concepts
 ### TSDataset
@@ -251,6 +266,34 @@ transformed_dataset = pipeline.fit_transform(dataset)
 print(dataset.data)
 ```
 
+```output
+Applying transformation 1/4: MaxWithOptimization...
+  Added columns: ['price_max_expanding']
+  Dataset shape: 6 rows,                         5 columns
+Applying transformation 2/4: SumWithPrefixSumOptimization...
+  Added columns: ['price_max_expanding', 'volume_sum_expanding']
+  Dataset shape: 6 rows,                         6 columns
+Applying transformation 3/4: Median...
+  Added columns: ['price_max_expanding', 'price_median_rolling_2', 'volume_sum_expanding']
+  Dataset shape: 6 rows,                         7 columns
+Applying transformation 4/4: StdWithoutOptimization...
+  Added columns: ['price_max_expanding', 'price_median_rolling_2', 'volume_std_rolling_2', 'volume_sum_expanding']
+  Dataset shape: 6 rows,                         8 columns
+shape: (6, 4)
+┌─────┬───────────┬───────┬────────┐
+│ id  ┆ timestamp ┆ price ┆ volume │
+│ --- ┆ ---       ┆ ---   ┆ ---    │
+│ i64 ┆ i64       ┆ i64   ┆ i64    │
+╞═════╪═══════════╪═══════╪════════╡
+│ 1   ┆ 1         ┆ 10    ┆ 100    │
+│ 1   ┆ 2         ┆ 12    ┆ 120    │
+│ 1   ┆ 3         ┆ 15    ┆ 150    │
+│ 2   ┆ 1         ┆ 20    ┆ 200    │
+│ 2   ┆ 2         ┆ 18    ┆ 180    │
+│ 2   ┆ 3         ┆ 22    ┆ 220    │
+└─────┴───────────┴───────┴────────┘
+```
+
 ### Using Dynamic Windows
 ```python
 import polars as pl
@@ -282,6 +325,23 @@ transformed_dataset = max_transformer.transform(dataset)
 # View the result
 print(transformed_dataset.data)
 ```
+
+```output
+shape: (6, 5)
+┌─────┬───────────┬───────┬────────────┬─────────────────────────────────┐
+│ id  ┆ timestamp ┆ value ┆ window_len ┆ value_max_dynamic_based_on_win… │
+│ --- ┆ ---       ┆ ---   ┆ ---        ┆ ---                             │
+│ i64 ┆ i64       ┆ i64   ┆ i64        ┆ f32                             │
+╞═════╪═══════════╪═══════╪════════════╪═════════════════════════════════╡
+│ 1   ┆ 1         ┆ 1     ┆ 1          ┆ 1.0                             │
+│ 1   ┆ 2         ┆ 2     ┆ 2          ┆ 2.0                             │
+│ 1   ┆ 3         ┆ 3     ┆ 3          ┆ 3.0                             │
+│ 2   ┆ 1         ┆ 4     ┆ 1          ┆ 4.0                             │
+│ 2   ┆ 2         ┆ 5     ┆ 2          ┆ 5.0                             │
+│ 2   ┆ 3         ┆ 6     ┆ 3          ┆ 6.0                             │
+└─────┴───────────┴───────┴────────────┴─────────────────────────────────┘
+```
+
 
 ## License
 This project is licensed under the terms of the LICENSE file (MIT License) included in the repository.
