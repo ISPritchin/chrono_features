@@ -3,6 +3,9 @@
 from copy import deepcopy
 from typing import Union
 
+import polars as pl
+import pandas as pd
+
 from chrono_features.features._base import FeatureGenerator
 from chrono_features.ts_dataset import TSDataset
 
@@ -29,7 +32,7 @@ class TransformationPipeline:
         ...     "timestamp": [1, 2, 3, 1, 2],
         ...     "value": [10, 20, 30, 40, 50]
         ... })
-        >>> dataset = TSDataset(data, id_column="id", timestamp_column="timestamp")
+        >>> dataset = TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
         >>> # Create feature generators
         >>> mean_feature = Mean(
@@ -44,6 +47,13 @@ class TransformationPipeline:
         >>> # Create and apply pipeline
         >>> pipeline = TransformationPipeline([mean_feature, std_feature])
         >>> transformed_dataset = pipeline.fit_transform(dataset)
+
+        >>> # Or directly with a polars DataFrame
+        >>> transformed_df = pipeline.fit_transform_df(
+        ...     data,
+        ...     id_column_name="id",
+        ...     ts_column_name="timestamp"
+        ... )
     """
 
     def __init__(self, transformations: list[FeatureGenerator], *, verbose: bool = False) -> None:
@@ -64,37 +74,151 @@ class TransformationPipeline:
                 msg = f"Transformation #{i+1} must be a FeatureGenerator, got {type(trans)}"
                 raise TypeError(msg)
 
-    def fit_transform(self, dataset: TSDataset) -> TSDataset:
-        """Applies all transformations sequentially to the input dataset.
+    def fit_transform(
+        self,
+        data: TSDataset | pl.DataFrame | pd.DataFrame,
+        id_column_name: str | None = None,
+        ts_column_name: str | None = None,
+    ) -> TSDataset | pl.DataFrame | pd.DataFrame:
+        """Applies all transformations sequentially to the input data.
+
+        This method intelligently handles different input types:
+        - TSDataset: Used directly
+        - polars.DataFrame: Converted to TSDataset using provided column names
+        - pandas.DataFrame: Converted to polars, then to TSDataset, and result converted back to pandas
 
         Args:
-            dataset: Input TSDataset to transform.
+            data: Input data (TSDataset, polars.DataFrame, or pandas.DataFrame)
+            id_column_name: Name of the column containing entity identifiers (required for DataFrame inputs)
+            ts_column_name: Name of the column containing timestamps (required for DataFrame inputs)
 
         Returns:
-            Transformed TSDataset after applying all transformations.
+            Transformed data in the same format as the input
 
         Raises:
-            TypeError: If input is not a TSDataset instance.
+            TypeError: If input type is not supported or required parameters are missing
         """
-        if not isinstance(dataset, TSDataset):
-            msg = "Input must be a TSDataset object"
+        import pandas as pd
+
+        # Case 1: Input is already a TSDataset
+        if isinstance(data, TSDataset):
+            current_dataset = data.clone()
+
+            for i, transformation in enumerate(self.transformations):
+                if self.verbose:
+                    trans_name = transformation.__class__.__name__
+                    print(f"Applying transformation {i+1}/{len(self.transformations)}: {trans_name}...")
+
+                current_dataset = transformation.transform(current_dataset)
+
+                if self.verbose:
+                    new_cols = set(current_dataset.data.columns) - set(data.data.columns)
+                    print(f"  Added columns: {list(new_cols)}")
+                    print(
+                        f"  Dataset shape: {len(current_dataset.data)} rows, \
+                        {len(current_dataset.data.columns)} columns",
+                    )
+
+            return current_dataset
+
+        # Case 2: Input is a polars DataFrame
+        if isinstance(data, pl.DataFrame):
+            if id_column_name is None or ts_column_name is None:
+                msg = "When input is a DataFrame, id_column_name and ts_column_name must be provided"
+                raise TypeError(msg)
+
+            # Create a TSDataset from the DataFrame
+            dataset = TSDataset(data, id_column_name=id_column_name, ts_column_name=ts_column_name)
+
+            # Apply transformations
+            transformed_dataset = self.fit_transform(dataset)
+
+            # Return the transformed DataFrame
+            return transformed_dataset.data
+
+        # Case 3: Input is a pandas DataFrame
+        if pd and isinstance(data, pd.DataFrame):
+            if id_column_name is None or ts_column_name is None:
+                msg = "When input is a DataFrame, id_column_name and ts_column_name must be provided"
+                raise TypeError(msg)
+
+            # Convert pandas DataFrame to polars
+            pl_df = pl.from_pandas(data)
+
+            # Create a TSDataset from the polars DataFrame
+            dataset = TSDataset(pl_df, id_column_name=id_column_name, ts_column_name=ts_column_name)
+
+            # Apply transformations
+            transformed_dataset = self.fit_transform(dataset)
+
+            # Convert back to pandas and return
+            return transformed_dataset.data.to_pandas()
+
+        msg = f"Unsupported input type: {type(data)}. Expected TSDataset, polars.DataFrame, or pandas.DataFrame"
+        raise TypeError(msg)
+
+    def fit_transform_df(self, df: pl.DataFrame, id_column_name: str, ts_column_name: str) -> pl.DataFrame:
+        """Applies all transformations sequentially to a polars DataFrame.
+
+        This method creates a TSDataset from the input DataFrame and applies
+        all transformations, then returns the transformed DataFrame.
+
+        Args:
+            df: Input polars DataFrame to transform.
+            id_column_name: Name of the column containing entity identifiers.
+            ts_column_name: Name of the column containing timestamps.
+
+        Returns:
+            Transformed polars DataFrame after applying all transformations.
+
+        Raises:
+            TypeError: If input is not a polars DataFrame.
+        """
+        if not isinstance(df, pl.DataFrame):
+            msg = "Input must be a polars DataFrame"
             raise TypeError(msg)
 
-        current_dataset = dataset.clone()
+        # Create a TSDataset from the DataFrame
+        dataset = TSDataset(df, id_column_name=id_column_name, ts_column_name=ts_column_name)
 
-        for i, transformation in enumerate(self.transformations):
-            if self.verbose:
-                trans_name = transformation.__class__.__name__
-                print(f"Applying transformation {i+1}/{len(self.transformations)}: {trans_name}...")
+        # Apply transformations
+        transformed_dataset = self.fit_transform(dataset)
 
-            current_dataset = transformation.transform(current_dataset)
+        # Return the transformed DataFrame
+        return transformed_dataset.data
 
-            if self.verbose:
-                new_cols = set(current_dataset.data.columns) - set(dataset.data.columns)
-                print(f"  Added columns: {list(new_cols)}")
-                print(f"  Dataset shape: {len(current_dataset.data)} rows, {len(current_dataset.data.columns)} columns")
+    def fit_transform_pandas(self, df: pd.DataFrame, id_column_name: str, ts_column_name: str) -> pd.DataFrame:
+        """Applies all transformations sequentially to a pandas DataFrame.
 
-        return current_dataset
+        This method converts the pandas DataFrame to polars, creates a TSDataset,
+        applies all transformations, and then converts back to pandas.
+
+        Args:
+            df: Input pandas DataFrame to transform.
+            id_column_name: Name of the column containing entity identifiers.
+            ts_column_name: Name of the column containing timestamps.
+
+        Returns:
+            Transformed pandas DataFrame after applying all transformations.
+
+        Raises:
+            TypeError: If input is not a pandas DataFrame.
+        """
+        if not isinstance(df, pd.DataFrame):
+            msg = "Input must be a pandas DataFrame"
+            raise TypeError(msg)
+
+        # Convert pandas DataFrame to polars
+        pl_df = pl.from_pandas(df)
+
+        # Create a TSDataset from the polars DataFrame
+        dataset = TSDataset(pl_df, id_column_name=id_column_name, ts_column_name=ts_column_name)
+
+        # Apply transformations
+        transformed_dataset = self.fit_transform(dataset)
+
+        # Convert back to pandas and return
+        return transformed_dataset.data.to_pandas()
 
     def __add__(self, other: Union["TransformationPipeline", FeatureGenerator]) -> "TransformationPipeline":
         """Combines pipelines or adds a transformation using + operator.

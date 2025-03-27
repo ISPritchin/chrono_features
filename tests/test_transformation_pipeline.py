@@ -1,9 +1,10 @@
 import numpy as np
 import polars as pl
+import pandas as pd
 import pytest
 
 from chrono_features import WindowType
-from chrono_features.features import Median, Sum, WeightedMovingAverage
+from chrono_features.features import Max, Median, Sum, WeightedMovingAverage
 from chrono_features.features.sum import SumWithPrefixSumOptimization
 from chrono_features.features.mean import WeightedMean
 from chrono_features.transformation_pipeline import TransformationPipeline
@@ -303,7 +304,7 @@ def test_invalid_dataset_type():
     with pytest.raises(TypeError) as excinfo:
         pipeline.fit_transform("not_a_dataset")
 
-    assert "must be a TSDataset" in str(excinfo.value)
+    assert "Unsupported input type" in str(excinfo.value)
 
 
 def test_conflicting_column_names(multi_column_dataset):
@@ -472,3 +473,101 @@ def test_large_dataset_performance():
         first_series["value_sum_expanding"][:5].to_numpy(),
         np.cumsum(large_data["value"][:5].to_numpy()),
     )
+
+
+# Add this new test class after all the existing tests
+class TestUnifiedFitTransform:
+    """Tests for the unified fit_transform method that handles different input types."""
+
+    @pytest.fixture
+    def sample_data(self):
+        """Create sample data for testing."""
+        return pl.DataFrame(
+            {
+                "id": [1, 1, 1, 2, 2, 2],
+                "timestamp": [1, 2, 3, 1, 2, 3],
+                "value": [10, 20, 30, 40, 50, 60],
+            },
+        )
+
+    @pytest.fixture
+    def sample_transformers(self):
+        """Create sample transformers for testing."""
+        return [
+            Max(columns="value", window_types=WindowType.EXPANDING()),
+            Sum(columns="value", window_types=WindowType.ROLLING(size=2)),
+        ]
+
+    @pytest.fixture
+    def sample_pipeline(self, sample_transformers):
+        """Create a sample pipeline for testing."""
+        return TransformationPipeline(sample_transformers)
+
+    def test_fit_transform_with_tsdataset(self, sample_data, sample_pipeline):
+        """Test fit_transform with a TSDataset input."""
+        # Create a TSDataset
+        dataset = TSDataset(sample_data, id_column_name="id", ts_column_name="timestamp")
+
+        # Apply the pipeline
+        result = sample_pipeline.fit_transform(dataset)
+
+        # Check that the result is a TSDataset
+        assert isinstance(result, TSDataset)
+
+        # Check that the expected columns were added
+        assert "value_max_expanding" in result.data.columns
+        assert "value_sum_rolling_2" in result.data.columns
+
+        # Check some values
+        max_values = result.data["value_max_expanding"].to_numpy()
+        expected_max = np.array([10, 20, 30, 40, 50, 60])
+        np.testing.assert_array_equal(max_values, expected_max)
+
+    def test_fit_transform_with_polars_df(self, sample_data, sample_pipeline):
+        """Test fit_transform with a polars DataFrame input."""
+        # Apply the pipeline directly to a polars DataFrame
+        result = sample_pipeline.fit_transform(sample_data, id_column_name="id", ts_column_name="timestamp")
+
+        # Check that the result is a polars DataFrame
+        assert isinstance(result, pl.DataFrame)
+
+        # Check that the expected columns were added
+        assert "value_max_expanding" in result.columns
+        assert "value_sum_rolling_2" in result.columns
+
+        # Check some values
+        max_values = result["value_max_expanding"].to_numpy()
+        expected_max = np.array([10, 20, 30, 40, 50, 60])
+        np.testing.assert_array_equal(max_values, expected_max)
+
+    def test_fit_transform_with_pandas_df(self, sample_data, sample_pipeline):
+        """Test fit_transform with a pandas DataFrame input."""
+        # Convert to pandas DataFrame
+        pandas_df = sample_data.to_pandas()
+
+        # Apply the pipeline directly to a pandas DataFrame
+        result = sample_pipeline.fit_transform(pandas_df, id_column_name="id", ts_column_name="timestamp")
+
+        # Check that the result is a pandas DataFrame
+        assert isinstance(result, pd.DataFrame)
+
+        # Check that the expected columns were added
+        assert "value_max_expanding" in result.columns
+        assert "value_sum_rolling_2" in result.columns
+
+        # Check some values
+        max_values = result["value_max_expanding"].to_numpy()
+        expected_max = np.array([10, 20, 30, 40, 50, 60])
+        np.testing.assert_array_equal(max_values, expected_max)
+
+    def test_fit_transform_missing_column_names(self, sample_data, sample_pipeline):
+        """Test fit_transform with missing column names."""
+        # Try to apply the pipeline without column names
+        with pytest.raises(TypeError, match="id_column_name and ts_column_name must be provided"):
+            sample_pipeline.fit_transform(sample_data)
+
+    def test_fit_transform_unsupported_type(self, sample_pipeline):
+        """Test fit_transform with an unsupported input type."""
+        # Try to apply the pipeline to a list
+        with pytest.raises(TypeError, match="Unsupported input type"):
+            sample_pipeline.fit_transform([1, 2, 3])

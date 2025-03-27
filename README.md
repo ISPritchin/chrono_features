@@ -132,7 +132,7 @@ Windows are calculated separately for each unique ID in your dataset:
 ```
 
 ### Transformation Pipeline
-You can combine multiple transformers into a pipeline:
+You can combine multiple transformers into a pipeline for more efficient processing:
 
 ```python
 from chrono_features.transformation_pipeline import TransformationPipeline
@@ -147,8 +147,38 @@ pipeline = TransformationPipeline(
     verbose=True  # Print progress information
 )
 
-# Apply the pipeline
+# Apply the pipeline to a TSDataset
 transformed_dataset = pipeline.fit_transform(dataset)
+
+# Or apply directly to a polars DataFrame
+import polars as pl
+pl_df = pl.DataFrame({
+    "id": [1, 1, 1, 2, 2, 2],
+    "timestamp": [1, 2, 3, 1, 2, 3],
+    "value": [1, 2, 3, 4, 5, 6],
+})
+
+# Transform the polars DataFrame directly
+transformed_pl_df = pipeline.fit_transform(
+    pl_df,
+    id_column_name="id",
+    ts_column_name="timestamp"
+)
+
+# Or apply to a pandas DataFrame
+import pandas as pd
+pd_df = pd.DataFrame({
+    "id": [1, 1, 1, 2, 2, 2],
+    "timestamp": [1, 2, 3, 1, 2, 3],
+    "value": [1, 2, 3, 4, 5, 6],
+})
+
+# Transform the pandas DataFrame directly
+transformed_pd_df = pipeline.fit_transform(
+    pd_df,
+    id_column_name="id",
+    ts_column_name="timestamp"
+)
 ```
 
 ## Examples
