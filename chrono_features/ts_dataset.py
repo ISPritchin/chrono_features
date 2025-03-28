@@ -54,7 +54,7 @@ class TSDataset:
         return self.data.tail(n=n)
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def is_monotonic_blocks(values: np.ndarray) -> bool:
         """Checks if the given array is monotonic with blocks of equal values.
 

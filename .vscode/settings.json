@@ -36,6 +36,8 @@
     "python.analysis.autoImportCompletions": true,
     "python.analysis.inlayHints.pytestParameters": true,
     "python.analysis.inlayHints.functionReturnTypes": true,
+    "files.autoSave": "afterDelay",
+    "files.autoSaveDelay": 2000,
     "python.testing.pytestArgs": [
         "tests"
     ],

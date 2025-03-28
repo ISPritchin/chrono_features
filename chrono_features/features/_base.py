@@ -10,7 +10,7 @@ from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase, WindowType
 
 
-@numba.jit(nopython=True)
+@numba.jit(nopython=True)  # pragma: no cover
 def _calculate_expanding_window_length(ids: np.ndarray) -> np.ndarray:
     lens = np.empty(len(ids), dtype=np.int32)
     lens[0] = 1
@@ -22,7 +22,7 @@ def _calculate_expanding_window_length(ids: np.ndarray) -> np.ndarray:
     return lens
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def _calculate_rolling_window_length(*, ids: np.ndarray, window_size: int, only_full_window: bool) -> np.ndarray:
     lens = np.zeros(len(ids), dtype=np.int32)
     lens[0] = 1
@@ -78,7 +78,7 @@ def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.
     return res
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
     ts_lens = np.empty(len(ids), dtype=np.int32)
     current_id_index = 0
@@ -203,7 +203,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         self.numba_kwargs = {}
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def apply_func_to_full_window(
         feature: np.ndarray,
         func: Callable,
@@ -228,7 +228,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTSPoint(FeatureGenerator):
         return result
 
     @abstractmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(self: np.ndarray) -> np.ndarray:
         """Abstract method defining the Numba-compiled function to apply to each window.
 
@@ -320,7 +320,7 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def process_all_ts(
         feature: np.ndarray,
         lens: np.ndarray,

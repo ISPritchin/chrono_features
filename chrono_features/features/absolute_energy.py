@@ -37,7 +37,7 @@ class AbsoluteEnergyWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTS
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the absolute energy of the input array.
 

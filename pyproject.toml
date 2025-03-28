@@ -11,7 +11,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-version = "0.0.10"
+version = "0.0.11"
 
 keywords = ["timeseries", "features"]
 
@@ -160,3 +160,10 @@ markers = [
     "manual_running",
 ]
 addopts = "-v -s --strict-markers --testmon -m 'not performance and not manual_running'"
+
+[tool.coverage.run]
+omit = [
+    "tests/*",
+    "*/test_*.py",
+    "*/tests.py"
+]

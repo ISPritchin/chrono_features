@@ -71,7 +71,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         self.numba_kwargs = {"lag": lag}
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def apply_func_to_full_window(
         feature: np.ndarray,
         func: callable,
@@ -98,7 +98,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         return result
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray, lag: int) -> np.ndarray:
         """Calculate the autocorrelation of the input array at the specified lag.
 
@@ -115,7 +115,7 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         return autocorrelation(xs, lag=lag)
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def corr(x: np.array, y: np.array) -> float:
     """Calculate the Pearson correlation coefficient between two arrays.
 
@@ -150,7 +150,7 @@ def corr(x: np.array, y: np.array) -> float:
     return covariance / (n * std_dev_x * std_dev_y)
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def autocorrelation(x: np.array, lag: int = 12) -> float:
     """Calculate the autocorrelation of an array at the specified lag.
 

@@ -34,7 +34,7 @@ class StdWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the standard deviation of the input array.
 

@@ -37,7 +37,7 @@ class AbsoluteSumOfChangesWithoutOptimization(_FromNumbaFuncWithoutCalculatedFor
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the absolute sum of changes of the input array.
 

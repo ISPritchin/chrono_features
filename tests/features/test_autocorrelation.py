@@ -175,3 +175,14 @@ def test_autocorrelation_invalid_lag():
             lag=0,
             out_column_names="autocorr_invalid",
         )
+
+
+def test_autocorrelation_with_negative_lag():
+    """Tests that autocorrelation raises an error with negative lag values."""
+    with pytest.raises(ValueError, match="Lag must be greater than 0"):
+        Autocorrelation(
+            columns="value",
+            window_types=WindowType.EXPANDING(),
+            lag=-1,
+            out_column_names="autocorr_negative_lag",
+        )

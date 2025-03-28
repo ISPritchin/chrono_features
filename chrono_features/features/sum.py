@@ -9,7 +9,7 @@ from chrono_features.features._base import (
 from chrono_features.window_type import WindowBase, WindowType
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
     """Efficiently calculate cumulative sum for expanding windows using Numba optimization.
 
@@ -35,7 +35,7 @@ def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
     return result
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """Calculate sum for dynamic windows using prefix sum optimization.
 
@@ -76,7 +76,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
     return result
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """Optimized processing for rolling windows.
 
@@ -190,7 +190,7 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the sum of the input array.
 
@@ -294,19 +294,16 @@ class Sum(StrategySelector):
         Returns:
             The appropriate implementation class.
         """
-        # Always use optimized implementation for expanding windows
-        if isinstance(window_type, WindowType.EXPANDING):
-            return SumWithPrefixSumOptimization
-
-        # For rolling windows, use optimization if requested or if window size is large
-        min_rolling_size_for_optimization = 50
-        if isinstance(window_type, WindowType.ROLLING) and (
-            self.use_prefix_sum_optimization or window_type.size > min_rolling_size_for_optimization
+        # Use optimized implementation in these cases
+        min_window_size_for_optimization = 50
+        if any(
+            [
+                isinstance(window_type, WindowType.EXPANDING),
+                isinstance(window_type, WindowType.ROLLING)
+                and (self.use_prefix_sum_optimization or window_type.size > min_window_size_for_optimization),
+                isinstance(window_type, WindowType.DYNAMIC) and self.use_prefix_sum_optimization,
+            ],
         ):
-            return SumWithPrefixSumOptimization
-
-        # For dynamic windows, use optimization if requested
-        if isinstance(window_type, WindowType.DYNAMIC) and self.use_prefix_sum_optimization:
             return SumWithPrefixSumOptimization
 
         # Default to standard implementation

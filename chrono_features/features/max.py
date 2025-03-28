@@ -4,11 +4,12 @@ import numpy as np
 from chrono_features.features._base import (
     _FromNumbaFuncWithoutCalculatedForEachTS,
     _FromNumbaFuncWithoutCalculatedForEachTSPoint,
+    StrategySelector,
 )
 from chrono_features.window_type import WindowBase, WindowType
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
     """Process expanding window maximum calculation with Numba optimization.
 
@@ -32,7 +33,7 @@ def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
     return result
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """Process dynamic window maximum calculation with Numba optimization.
 
@@ -60,7 +61,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
     return result
 
 
-@numba.njit
+@numba.njit  # pragma: no cover
 def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """Process rolling window maximum calculation with Numba optimization.
 
@@ -87,7 +88,7 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         self,
         *,
         columns: list[str] | str,
-        window_types: list[str] | WindowType,
+        window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> None:
         """Initialize the optimized maximum feature generator.
@@ -143,10 +144,10 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
 
     def __init__(
         self,
+        *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
-        func_name: str = "max",
     ) -> None:
         """Initialize the standard maximum feature generator.
 
@@ -154,17 +155,16 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             columns: Columns to calculate maximum for.
             window_types: Types of windows to use.
             out_column_names: Names for output columns.
-            func_name: Name of the function for output column naming.
         """
         super().__init__(
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
-            func_name=func_name,
+            func_name="max",
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the maximum value in the input array.
 
@@ -177,39 +177,21 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         return np.max(xs)
 
 
-class Max:
-    """Factory class for creating maximum feature generators.
+class Max(StrategySelector):
+    """Maximum feature generator with dynamic strategy selection.
 
-    Provides a unified interface to create either optimized or standard implementations.
+    Selects between optimized and standard implementations based on window type.
     """
 
-    def __new__(
-        cls,
-        *,
-        columns: list[str] | str,
-        window_types: list[WindowType] | WindowType,
-        out_column_names: list[str] | str | None = None,
-        use_optimization: bool = False,
-    ) -> MaxWithOptimization | MaxWithoutOptimization:
-        """Create a maximum feature generator.
+    def _select_implementation_type(self, window_type: WindowBase) -> type:
+        """Select the appropriate implementation class based on window type.
 
         Args:
-            columns: Columns to calculate maximum for.
-            window_types: Types of windows to use.
-            out_column_names: Names for output columns.
-            use_optimization: Whether to use the optimized implementation.
+            window_type: The window type to process.
 
         Returns:
-            Either MaxWithOptimization or MaxWithoutOptimization based on the use_optimization flag.
+            The appropriate implementation class.
         """
-        if use_optimization or isinstance(window_types, WindowType.EXPANDING):
-            return MaxWithOptimization(
-                columns=columns,
-                window_types=window_types,
-                out_column_names=out_column_names,
-            )
-        return MaxWithoutOptimization(
-            columns=columns,
-            window_types=window_types,
-            out_column_names=out_column_names,
-        )
+        if isinstance(window_type, WindowType.EXPANDING):
+            return MaxWithOptimization
+        return MaxWithoutOptimization

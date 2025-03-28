@@ -37,7 +37,7 @@ class Mean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the arithmetic mean of the input array.
 
@@ -134,7 +134,7 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         self.numba_kwargs = {"weights": weights}
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def apply_func_to_full_window(
         feature: np.ndarray,
         func: callable,
@@ -166,7 +166,7 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         return result
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray, weights: np.ndarray) -> np.ndarray:
         """Calculate the weighted mean of the input array.
 

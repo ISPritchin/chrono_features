@@ -35,7 +35,7 @@ class Median(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         )
 
     @staticmethod
-    @numba.njit
+    @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
         """Calculate the median value of the input array.
 

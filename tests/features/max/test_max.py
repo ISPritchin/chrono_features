@@ -21,7 +21,6 @@ def sample_dataset() -> TSDataset:
 
 def test_max_expanding_with_optimization(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.EXPANDING(),
     )
@@ -34,7 +33,6 @@ def test_max_expanding_with_optimization(sample_dataset: TSDataset) -> None:
 
 def test_max_expanding_without_optimization(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=False,
         columns="value",
         window_types=WindowType.EXPANDING(),
     )
@@ -47,7 +45,6 @@ def test_max_expanding_without_optimization(sample_dataset: TSDataset) -> None:
 
 def test_max_rolling_only_full_window_with_optimization(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.ROLLING(size=2, only_full_window=True),
     )
@@ -60,7 +57,6 @@ def test_max_rolling_only_full_window_with_optimization(sample_dataset: TSDatase
 
 def test_max_multiple_window_types(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=[WindowType.EXPANDING(), WindowType.ROLLING(size=2, only_full_window=True)],
     )
@@ -78,7 +74,6 @@ def test_max_multiple_window_types(sample_dataset: TSDataset) -> None:
 
 def test_max_rolling_all_windows_with_optimization(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.ROLLING(size=2, only_full_window=False),
     )
@@ -92,7 +87,6 @@ def test_max_rolling_all_windows_with_optimization(sample_dataset: TSDataset) ->
 def test_max_dynamic_with_optimization(sample_dataset: TSDataset) -> None:
     sample_dataset.add_feature("window_len", [1, 2, 1, 1, 2, 1])
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.DYNAMIC(len_column_name="window_len"),
     )
@@ -106,7 +100,6 @@ def test_max_dynamic_with_optimization(sample_dataset: TSDataset) -> None:
 def test_max_multiple_columns_with_optimization(sample_dataset: TSDataset) -> None:
     sample_dataset.add_feature("value2", [10, 20, 30, 40, 50, 60])
     max_transformer = Max(
-        use_optimization=True,
         columns=["value", "value2"],
         window_types=WindowType.EXPANDING(),
     )
@@ -124,7 +117,6 @@ def test_max_multiple_columns_with_optimization(sample_dataset: TSDataset) -> No
 
 def test_max_custom_out_column_names(sample_dataset: TSDataset) -> None:
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.EXPANDING(),
         out_column_names="custom_max",
@@ -147,7 +139,6 @@ def test_max_with_nan_values():
     dataset_with_nan = TSDataset(data_with_nan, id_column_name="id", ts_column_name="timestamp")
 
     max_transformer = Max(
-        use_optimization=True,
         columns="value",
         window_types=WindowType.EXPANDING(),
     )
