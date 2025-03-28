@@ -398,25 +398,43 @@ class StrategySelector(AbstractGenerator, ABC):
             implementation_groups = {}
 
             # Group window types by implementation class
-            for window_type in self.window_types:
+            for i, window_type in enumerate(self.window_types):
                 impl_class = self._select_implementation_type(window_type)
 
                 if impl_class not in implementation_groups:
                     implementation_groups[impl_class] = {
                         "window_types": [],
+                        "window_indices": [],
                     }
 
                 implementation_groups[impl_class]["window_types"].append(window_type)
+                implementation_groups[impl_class]["window_indices"].append(i)
 
             # Process each implementation group
             for impl_class, group_data in implementation_groups.items():
                 window_types = group_data["window_types"]
+                window_indices = group_data["window_indices"]
+
+                # Determine the appropriate out_column_names for this implementation
+                local_out_column_names = None
+                if self.out_column_names is not None:
+                    # Calculate the indices for out_column_names
+                    # For each column and window type combination
+                    col_idx = self.columns.index(column)
+                    out_indices = []
+                    for window_idx in window_indices:
+                        # Calculate the index in the flattened list of out_column_names
+                        out_idx = col_idx * len(self.window_types) + window_idx
+                        out_indices.append(out_idx)
+
+                    # Extract the relevant out_column_names
+                    local_out_column_names = [self.out_column_names[i] for i in out_indices]
 
                 # Create the transformer instance with the grouped windows
                 transformer = impl_class(
                     columns=column,
                     window_types=window_types,
-                    out_column_names=self.out_column_names,
+                    out_column_names=local_out_column_names,
                 )
 
                 # Transform using the implementation

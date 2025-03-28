@@ -16,6 +16,17 @@ class WindowBase(ABC):
         """
         raise NotImplementedError
 
+    def add_suffix_to_feature(self, feature_name: str) -> str:
+        """Creates a new feature name by appending the window type suffix.
+
+        Args:
+            feature_name (str): The original feature name.
+
+        Returns:
+            str: The new feature name with the window type suffix appended.
+        """
+        return f"{feature_name}_{self.suffix}"
+
     @abstractmethod
     def __str__(self) -> str:
         """Returns a string representation of the window type.
