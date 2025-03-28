@@ -11,31 +11,31 @@ from chrono_features.window_type import WindowBase, WindowType
 
 @numba.njit  # pragma: no cover
 def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
-    """Process expanding window maximum calculation with Numba optimization.
+    """Process expanding window minimum calculation with Numba optimization.
 
     Args:
         feature (np.ndarray): Array of feature values.
         lens (np.ndarray): Array of window lengths for each point.
 
     Returns:
-        np.ndarray: Maximum values for each expanding window.
+        np.ndarray: Minimum values for each expanding window.
     """
     result = np.empty(len(feature), dtype=np.float64)
-    current_max = -np.inf
+    current_min = np.inf
     for i in range(len(lens)):
         if lens[i] == 1:  # Start of a new client/time series
-            current_max = feature[i]
+            current_min = feature[i]
         else:
-            if feature[i] > current_max or np.isnan(feature[i]):
-                current_max = feature[i]
-            current_max = max(current_max, feature[i])
-        result[i] = current_max
+            if feature[i] < current_min or np.isnan(feature[i]):
+                current_min = feature[i]
+            current_min = min(current_min, feature[i])
+        result[i] = current_min
     return result
 
 
 @numba.njit  # pragma: no cover
 def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """Process dynamic window maximum calculation with Numba optimization.
+    """Process dynamic window minimum calculation with Numba optimization.
 
     Args:
         feature (np.ndarray): Array of feature values.
@@ -43,7 +43,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
         ts_lens (np.ndarray): Lengths of individual time series.
 
     Returns:
-        np.ndarray: Maximum values for each dynamic window.
+        np.ndarray: Minimum values for each dynamic window.
     """
     result = np.empty(len(feature), dtype=np.float64)
 
@@ -55,7 +55,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
             potential_start = j - lens[j] + 1
             window_start = potential_start if potential_start >= start else start
             if lens[j]:
-                result[j] = np.max(feature[window_start : j + 1])
+                result[j] = np.min(feature[window_start : j + 1])
             else:
                 result[j] = np.nan
     return result
@@ -63,7 +63,7 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
 
 @numba.njit  # pragma: no cover
 def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
-    """Process rolling window maximum calculation with Numba optimization.
+    """Process rolling window minimum calculation with Numba optimization.
 
     Uses a sliding window approach that's more efficient than the dynamic window
     implementation for fixed-size windows.
@@ -74,7 +74,7 @@ def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
         ts_lens (np.ndarray): Lengths of individual time series.
 
     Returns:
-        np.ndarray: Maximum values for each rolling window.
+        np.ndarray: Minimum values for each rolling window.
     """
     result = np.empty(len(feature), dtype=np.float64)
     window_size_threshold = 3
@@ -94,24 +94,24 @@ def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
             # Start of window
             start_idx = max(ts_start, i - window_size + 1)
 
-            # For small windows, just use direct max calculation
+            # For small windows, just use direct min calculation
             if window_size <= window_size_threshold:
-                result[i] = np.max(feature[start_idx : i + 1])
+                result[i] = np.min(feature[start_idx : i + 1])
                 continue
 
-            # For the first point in each window size, calculate max directly
+            # For the first point in each window size, calculate min directly
             if i == ts_start or lens[i] != lens[i - 1]:
-                result[i] = np.max(feature[start_idx : i + 1])
+                result[i] = np.min(feature[start_idx : i + 1])
                 continue
 
             # For subsequent points, use sliding window optimization:
-            # If the new value is larger than previous max, it becomes the new max
-            if feature[i] >= result[i - 1]:
+            # If the new value is smaller than previous min, it becomes the new min
+            if feature[i] <= result[i - 1]:
                 result[i] = feature[i]
-            # If the value leaving the window was the max, recalculate
+            # If the value leaving the window was the min, recalculate
             elif start_idx > ts_start and feature[start_idx - 1] == result[i - 1]:
-                result[i] = np.max(feature[start_idx : i + 1])
-            # Otherwise, keep the previous max
+                result[i] = np.min(feature[start_idx : i + 1])
+            # Otherwise, keep the previous min
             else:
                 result[i] = result[i - 1]
 
@@ -120,8 +120,8 @@ def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
     return result
 
 
-class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
-    """Maximum feature generator with optimized implementation for different window types.
+class MinWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
+    """Minimum feature generator with optimized implementation for different window types.
 
     Uses specialized algorithms for each window type to improve performance.
     """
@@ -133,10 +133,10 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> None:
-        """Initialize the optimized maximum feature generator.
+        """Initialize the optimized minimum feature generator.
 
         Args:
-            columns: Columns to calculate maximum for.
+            columns: Columns to calculate minimum for.
             window_types: Types of windows to use.
             out_column_names: Names for output columns.
         """
@@ -144,7 +144,7 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
-            func_name="max",
+            func_name="min",
         )
 
     @staticmethod
@@ -163,7 +163,7 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
             window_type: Type of window to use.
 
         Returns:
-            np.ndarray: Maximum values for each window.
+            np.ndarray: Minimum values for each window.
 
         Raises:
             ValueError: If an unsupported window type is provided.
@@ -178,10 +178,10 @@ class MaxWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
         raise ValueError(msg)
 
 
-class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
-    """Maximum feature generator using the standard implementation.
+class MinWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
+    """Minimum feature generator using the standard implementation.
 
-    Uses the base class's window processing logic with a simple max function.
+    Uses the base class's window processing logic with a simple min function.
     """
 
     def __init__(
@@ -191,10 +191,10 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
     ) -> None:
-        """Initialize the standard maximum feature generator.
+        """Initialize the standard minimum feature generator.
 
         Args:
-            columns: Columns to calculate maximum for.
+            columns: Columns to calculate minimum for.
             window_types: Types of windows to use.
             out_column_names: Names for output columns.
         """
@@ -202,25 +202,25 @@ class MaxWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
-            func_name="max",
+            func_name="min",
         )
 
     @staticmethod
     @numba.njit  # pragma: no cover
     def _numba_func(xs: np.ndarray) -> np.ndarray:
-        """Calculate the maximum value in the input array.
+        """Calculate the minimum value in the input array.
 
         Args:
             xs: Input array.
 
         Returns:
-            np.ndarray : Maximum value.
+            np.ndarray : Minimum value.
         """
-        return np.max(xs)
+        return np.min(xs)
 
 
-class Max(StrategySelector):
-    """Maximum feature generator with dynamic strategy selection.
+class Min(StrategySelector):
+    """Minimum feature generator with dynamic strategy selection.
 
     Selects between optimized and standard implementations based on window type.
     """
@@ -238,5 +238,5 @@ class Max(StrategySelector):
         if isinstance(window_type, WindowType.EXPANDING) or (
             isinstance(window_type, WindowType.ROLLING) and (window_type.size > min_window_size_for_optimization),
         ):
-            return MaxWithOptimization
-        return MaxWithoutOptimization
+            return MinWithOptimization
+        return MinWithoutOptimization

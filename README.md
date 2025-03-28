@@ -65,10 +65,10 @@ shape: (6, 4)
 
 The following table lists all available transformers in the `chrono_features.features` package:
 
-| Transformer | Description | Main Parameters |
-|-------------|-------------|----------------|
+| Transformer | Description | Parameters |
+| ----------- | ----------- | ---------- |
 | `Max` | Calculates maximum value in window | `columns`, `window_types` |
-| `Min` | Calculates minimum value in window | `columns`, `window_types`|
+| `Min` | Calculates the minimum value in window| `columns`, `window_types`|
 | `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
 | `Mean` | Calculates average of values in window | `columns`, `window_types` |
 | `Std` | Calculates standard deviation in window | `columns`, `window_types` |
@@ -299,7 +299,7 @@ shape: (6, 8)
 │ id  ┆ timestamp ┆ price ┆ volume ┆ price_max_expanding ┆ volume_sum_expanding ┆ price_median_rolling_2 ┆ volume_std_rolling_2 │
 │ --- ┆ ---       ┆ ---   ┆ ---    ┆ ---                 ┆ ---                  ┆ ---                    ┆ ---                  │
 │ i64 ┆ i64       ┆ i64   ┆ i64    ┆ f64                 ┆ f64                  ┆ f32                    ┆ f32                  │
-╞═════╪═══════════╪═══════╪════════╪═════════════════════╪══════════════════════╪════════════════════════╪══════════════════════╡
+╞═════╪═══════════╪═══════╪════════╪═════════════════════╪══════════════════════╪══════════════════════╡
 │ 1   ┆ 1         ┆ 10    ┆ 100    ┆ 10.0                ┆ 100.0                ┆ NaN                    ┆ NaN                  │
 │ 1   ┆ 2         ┆ 12    ┆ 120    ┆ 12.0                ┆ 220.0                ┆ 11.0                   ┆ 10.0                 │
 │ 1   ┆ 3         ┆ 15    ┆ 150    ┆ 15.0                ┆ 370.0                ┆ 13.5                   ┆ 15.0                 │

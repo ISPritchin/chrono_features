@@ -20,49 +20,21 @@ def test_performance_comparison() -> None:
     transformers = [
         Max(
             columns="value",
-            use_optimization=True,
             window_types=WindowType.EXPANDING(),
             out_column_names=["max_expanding"],
         ),
         Max(
             columns="value",
-            use_optimization=True,
             window_types=WindowType.ROLLING(size=10),
             out_column_names=["max_rolling_10"],
         ),
         Max(
             columns="value",
-            use_optimization=True,
             window_types=WindowType.ROLLING(size=100),
             out_column_names=["max_rolling_100"],
         ),
         Max(
             columns="value",
-            use_optimization=True,
-            window_types=WindowType.ROLLING(size=1000),
-            out_column_names=["max_rolling_1000"],
-        ),
-        Max(
-            columns="value",
-            use_optimization=False,
-            window_types=WindowType.EXPANDING(),
-            out_column_names=["max_expanding"],
-        ),
-        Max(
-            columns="value",
-            use_optimization=False,
-            window_types=WindowType.ROLLING(size=10),
-            out_column_names=["max_rolling_10"],
-        ),
-        Max(
-            columns="value",
-            use_optimization=False,
-            window_types=WindowType.ROLLING(size=100),
-            out_column_names=["max_rolling_100"],
-        ),
-        Max(
-            columns="value",
-            use_optimization=False,
             window_types=WindowType.ROLLING(size=1000),
             out_column_names=["max_rolling_1000"],
         ),
