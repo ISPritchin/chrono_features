@@ -11,7 +11,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-version = "0.0.11"
+version = "0.0.12"
 
 keywords = ["timeseries", "features"]
 

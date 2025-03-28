@@ -45,19 +45,51 @@ def _calculate_rolling_window_length(*, ids: np.ndarray, window_size: int, only_
     return lens
 
 
+@numba.njit  # pragma: no cover
+def _calculate_dynamic_window_length(ids: np.ndarray, lens: np.ndarray) -> np.ndarray:
+    """Calculate window lengths for dynamic windows, ensuring they don't exceed available data.
+
+    Args:
+        ids: Array of time series IDs.
+        lens: Array of requested window lengths.
+
+    Returns:
+        Array of adjusted window lengths.
+    """
+    result = np.zeros_like(lens, dtype=np.int32)
+    current_len = 1
+
+    for i in range(len(ids)):
+        if i == 0 or ids[i] != ids[i - 1]:
+            current_len = 1
+        else:
+            current_len += 1
+
+        # Limit window length to available points in current time series
+        result[i] = min(lens[i], current_len)
+
+    return result
+
+
 def calculate_window_lengths(dataset: TSDataset, window_type: WindowBase) -> np.ndarray:
     """Calculate window lengths for each point in the dataset.
 
     Args:
         dataset (TSDataset): The input dataset.
         window_type (WindowBase): The type of window (expanding, rolling, etc.).
-        id_column_name (str): The name of the column containing IDs.
 
     Returns:
         np.ndarray: Array of window lengths for each point.
     """
     if isinstance(window_type, WindowType.DYNAMIC):
-        return dataset.data[window_type.len_column_name].to_numpy()
+        # Get the dynamic window lengths
+        lens = dataset.data[window_type.len_column_name].to_numpy()
+
+        # Get the IDs to determine time series boundaries
+        ids = dataset.get_numeric_id_column_values()
+
+        # Use the Numba-optimized function to calculate adjusted window lengths
+        return _calculate_dynamic_window_length(ids, lens)
 
     # Get the IDs and convert them to a hash for consistent comparison
     ids = dataset.get_numeric_id_column_values()

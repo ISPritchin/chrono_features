@@ -71,6 +71,8 @@ def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) 
             if lens[j] == 0:
                 result[j] = np.nan
             else:
+                # If window length is larger than available points, use all available points
+                start_window = max(start_window, 0)
                 result[j] = prefix_sum_array[v] - prefix_sum_array[start_window]
 
     return result

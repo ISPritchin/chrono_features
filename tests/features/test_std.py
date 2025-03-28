@@ -59,7 +59,7 @@ def test_std_dynamic(sample_dataset):
     # Expected results:
     # For windows of size 1: NaN (std undefined for single value)
     # For windows of size 2: std of current and previous value
-    expected_values = np.array([np.nan, 0.5, np.nan, 0.5, np.nan, 1])
+    expected_values = np.array([np.nan, 0.5, np.nan, np.nan, np.nan, 1])
 
     result_values = transformed_dataset.data["value_std_dynamic_based_on_window_len"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, rtol=1e-7, equal_nan=True)
