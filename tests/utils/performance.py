@@ -83,13 +83,18 @@ def performance_comparison(
 
             # Extract transformer parameters
             transformer_params = {}
+
             for attr_name in dir(transformer):
                 # Skip private attributes, methods, and callables
                 if attr_name.startswith("_") or callable(getattr(transformer, attr_name)):
                     continue
 
                 # Get important parameters
-                if attr_name in ["columns", "window_types", "use_optimization", "out_column_names"]:
+                if attr_name in ["columns", "window_types", "out_column_names"]:
+                    transformer_params[attr_name] = getattr(transformer, attr_name)
+
+                # Check for optimization flags with various possible names
+                if attr_name in ["use_prefix_sum_optimization", "use_optimization", "optimized"]:
                     transformer_params[attr_name] = getattr(transformer, attr_name)
 
             # Format parameters as string
@@ -100,26 +105,53 @@ def performance_comparison(
             transformed_dataset = transformer.transform(dataset)
             execution_time = time.time() - start_time
 
-            # Get output column name
+            # Get output column names and metadata
             if hasattr(transformer, "out_column_names") and transformer.out_column_names:
-                out_col = transformer.out_column_names[0]
+                for out_col in transformer.out_column_names:
+                    # Get implementation metadata if available
+                    implementation_class = transformer_name
+
+                    # Check for metadata in the transformed dataset
+                    if (
+                        hasattr(transformed_dataset, "_feature_metadata")
+                        and out_col in transformed_dataset._feature_metadata
+                    ):
+                        metadata = transformed_dataset._feature_metadata[out_col]
+                        if "implementation_class" in metadata:
+                            implementation_class = metadata["implementation_class"]
+
+                    # Check for metadata in the transformer
+                    elif hasattr(transformer, "implementation_metadata"):
+                        # Try to find metadata for this column
+                        for value in transformer.implementation_metadata.values():
+                            if "implementation_class" in value:
+                                implementation_class = value["implementation_class"]
+                                break
+
+                    # Store result with implementation metadata
+                    result = {
+                        "dataset_size": dataset_name,
+                        "dataset_info": dataset_info,
+                        "transformer": transformer_name,
+                        "implementation_class": implementation_class,
+                        "transformer_params": params_str,
+                        "execution_time": execution_time,
+                        "output_column": out_col,
+                    }
+
+                    all_results.append(result)
             else:
-                out_col = f"result_{transformer_name.lower()}"
+                # Fallback for transformers without out_column_names
+                result = {
+                    "dataset_size": dataset_name,
+                    "dataset_info": dataset_info,
+                    "transformer": transformer_name,
+                    "implementation_class": transformer_name,
+                    "transformer_params": params_str,
+                    "execution_time": execution_time,
+                }
 
-            # Print results
-
-            # Store result
-            result = {
-                "dataset_size": dataset_name,
-                "dataset_info": dataset_info,
-                "transformer": transformer_name,
-                "transformer_params": params_str,
-                "execution_time": execution_time,
-                "output_column": out_col,
-                "result": transformed_dataset.data[out_col].to_numpy(),
-            }
-
-            all_results.append(result)
+                all_results.append(result)
 
     # Create combined dataset info
     combined_info = {
@@ -150,6 +182,29 @@ def create_dataset(n_ids: int, n_timestamps: int) -> TSDataset:
         },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
+
+
+def create_dataset_with_dynamic_windows(n_ids, n_timestamps, max_window_size=1000):
+    """Create a dataset with an additional column for dynamic window lengths.
+
+    Args:
+        n_ids: Number of unique IDs in the dataset.
+        n_timestamps: Number of timestamps per ID.
+        max_window_size: Maximum value for dynamic window length (default: 1000).
+
+    Returns:
+        TSDataset with added dynamic window length column.
+    """
+    dataset = create_dataset(n_ids=n_ids, n_timestamps=n_timestamps)
+
+    # Add a single dynamic window length column
+    total_rows = len(dataset.data)
+
+    # Values from 0 to max_window_size
+    dynamic_len = np.random.randint(0, max_window_size + 1, size=total_rows)
+    dataset.add_feature("dynamic_len", dynamic_len)
+
+    return dataset
 
 
 def run_performance_test(
@@ -212,23 +267,35 @@ def save_results_to_excel(results: list[dict], dataset_info: dict, filename: str
         params_str = result.get("transformer_params", "")
         formatted_params = params_str.replace(", ", "\n")
 
+        # Get implementation class from metadata if available
+        implementation_class = "Unknown"
+        if "implementation_class" in result:
+            implementation_class = result["implementation_class"]
+        elif "metadata" in result and "implementation_class" in result["metadata"]:
+            implementation_class = result["metadata"]["implementation_class"]
+
+        # Create a descriptive transformer name using implementation metadata
+        transformer_name = result.get("transformer", "Unknown")
+        if implementation_class != "Unknown":
+            transformer_display = f"{transformer_name} ({implementation_class})"
+        else:
+            transformer_display = transformer_name
+
         perf_data.append(
             {
                 "Dataset Name": result.get("dataset_size", "unknown"),
                 "Dataset Parameters": f"IDs: {result['dataset_info'].get('Number of unique IDs', 'N/A')}, "
                 + f"Timestamps: {result['dataset_info'].get('Timestamps per ID', 'N/A')}, "
                 + f"Total Rows: {result['dataset_info'].get('Total rows', 'N/A')}",
-                "Transformer Name": result.get("transformer", "unknown"),
+                "Implementation": transformer_display,
                 "Transformer Parameters": formatted_params,
                 "Time (s)": result["execution_time"],
             },
         )
 
-    # Create DataFrame and sort by Dataset Name and then group by similar Transformer Parameters
+    # Create DataFrame and sort by Dataset Name and then by Implementation
     perf_df = pd.DataFrame(perf_data)
-
-    # Sort by Dataset Name first
-    perf_df = perf_df.sort_values(by=["Dataset Name", "Transformer Parameters"])
+    perf_df = perf_df.sort_values(by=["Dataset Name", "Implementation", "Transformer Parameters"])
 
     # Create Excel workbook
     wb = Workbook()
@@ -321,12 +388,19 @@ def save_results_to_excel(results: list[dict], dataset_info: dict, filename: str
             cell = perf_sheet.cell(row=r_idx, column=c_idx, value=value)
 
             # Format time with 6 decimal places
-            if c_idx == 5 and r_idx > 2:
+            if c_idx == 5 and r_idx > 2:  # Time column
                 cell.value = f"{value:.6f}"
 
             # Set text alignment for transformer parameters to allow line breaks
-            if c_idx == 4 and r_idx > 2:
+            if c_idx == 4 and r_idx > 2:  # Transformer Parameters column
                 cell.alignment = Alignment(wrap_text=True, vertical="top")
+
+            # Highlight implementation classes
+            if c_idx == 3 and r_idx > 2:  # Implementation column
+                if "WithOptimization" in str(value) or "Optimized" in str(value):
+                    cell.font = Font(color="006100")  # Dark green
+                elif "WithoutOptimization" in str(value) or "Standard" in str(value):
+                    cell.font = Font(color="9C0006")  # Dark red
 
     # Auto-adjust column widths for performance sheet
     column_max_lengths = {}

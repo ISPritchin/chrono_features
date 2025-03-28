@@ -4,7 +4,7 @@ import pytest
 
 from chrono_features import WindowType
 from chrono_features.features import Max
-from tests.utils.performance import create_dataset, performance_comparison
+from tests.utils.performance import create_dataset_with_dynamic_windows, performance_comparison
 
 
 @pytest.mark.performance
@@ -12,32 +12,27 @@ def test_performance_comparison() -> None:
     """Test performance of Max feature with different window types and optimization settings across dataset sizes."""
     # Define datasets to test
     datasets = {
-        "medium": create_dataset(n_ids=50, n_timestamps=10000),
-        "large": create_dataset(n_ids=500, n_timestamps=10000),
+        "medium": create_dataset_with_dynamic_windows(n_ids=50, n_timestamps=10000, max_window_size=100),
+        "large": create_dataset_with_dynamic_windows(n_ids=500, n_timestamps=10000, max_window_size=100),
     }
 
-    # Create transformer instances directly
+    # Define window types to test
+    window_types = [
+        (WindowType.EXPANDING(), "expanding"),
+        (WindowType.ROLLING(size=10), "rolling_10"),
+        (WindowType.ROLLING(size=100), "rolling_100"),
+        (WindowType.ROLLING(size=1000), "rolling_1000"),
+        (WindowType.DYNAMIC(len_column_name="dynamic_len"), "dynamic"),
+    ]
+
+    # Create transformer instances using list comprehension
     transformers = [
         Max(
             columns="value",
-            window_types=WindowType.EXPANDING(),
-            out_column_names=["max_expanding"],
-        ),
-        Max(
-            columns="value",
-            window_types=WindowType.ROLLING(size=10),
-            out_column_names=["max_rolling_10"],
-        ),
-        Max(
-            columns="value",
-            window_types=WindowType.ROLLING(size=100),
-            out_column_names=["max_rolling_100"],
-        ),
-        Max(
-            columns="value",
-            window_types=WindowType.ROLLING(size=1000),
-            out_column_names=["max_rolling_1000"],
-        ),
+            window_types=window_type,
+            out_column_names=[f"max_{name}"],
+        )
+        for window_type, name in window_types
     ]
 
     # Run the performance comparison

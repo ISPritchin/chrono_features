@@ -3,13 +3,13 @@ from pathlib import Path
 import pytest
 
 from chrono_features import WindowType
-from chrono_features.features import Sum
+from chrono_features.features import Min
 from tests.utils.performance import create_dataset_with_dynamic_windows, performance_comparison
 
 
 @pytest.mark.performance
 def test_performance_comparison() -> None:
-    """Test performance of Sum feature with different window types and optimization settings across dataset sizes."""
+    """Test performance of Min feature with different window types and optimization settings across dataset sizes."""
     # Define datasets to test
     datasets = {
         "medium": create_dataset_with_dynamic_windows(n_ids=50, n_timestamps=10000, max_window_size=100),
@@ -27,14 +27,12 @@ def test_performance_comparison() -> None:
 
     # Create transformer instances using list comprehension
     transformers = [
-        Sum(
+        Min(
             columns="value",
-            use_prefix_sum_optimization=opt,
             window_types=window_type,
-            out_column_names=[f"sum_{name}"],
+            out_column_names=[f"min_{name}"],
         )
         for window_type, name in window_types
-        for opt in [True, False]
     ]
 
     # Run the performance comparison

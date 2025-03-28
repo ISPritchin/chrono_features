@@ -367,6 +367,9 @@ class StrategySelector(AbstractGenerator, ABC):
         else:
             self.out_column_names = None
 
+        # Initialize metadata dictionary to store implementation information
+        self.implementation_metadata = {}
+
     @abstractmethod
     def _select_implementation_type(self, window_type: WindowBase) -> type:
         """Select the appropriate implementation class based on window type.
@@ -378,7 +381,7 @@ class StrategySelector(AbstractGenerator, ABC):
             The appropriate implementation class.
         """
 
-    def transform(self, dataset: TSDataset) -> TSDataset:
+    def transform(self, dataset: TSDataset) -> TSDataset:  # noqa: C901
         """Transform the dataset using the appropriate implementation for each window type.
 
         This implementation first groups window types by their optimal implementation,
@@ -391,6 +394,10 @@ class StrategySelector(AbstractGenerator, ABC):
             The transformed dataset.
         """
         result = dataset.clone()
+
+        # Initialize metadata storage in the result dataset if not present
+        if not hasattr(result, "_feature_metadata"):
+            result._feature_metadata = {}  # noqa: SLF001
 
         # Group window types by implementation for each column
         for column in self.columns:
@@ -439,6 +446,25 @@ class StrategySelector(AbstractGenerator, ABC):
 
                 # Transform using the implementation
                 transformed_result = transformer.transform(dataset)
+
+                # Store metadata about which implementation was used for each column/window combination
+                for i, window_type in enumerate(window_types):
+                    if local_out_column_names:
+                        out_col_name = local_out_column_names[i]
+
+                        # Create a key for the metadata dictionary
+                        metadata_key = (column, str(window_type))
+
+                        # Store implementation information
+                        implementation_info = {
+                            "implementation_class": impl_class.__name__,
+                            "column": column,
+                            "window_type": str(window_type),
+                        }
+
+                        # Store in both the class instance and the result dataset
+                        self.implementation_metadata[metadata_key] = implementation_info
+                        result._feature_metadata[out_col_name] = implementation_info  # noqa: SLF001
 
                 # Add all new columns from the transformed result to our result
                 for col_name in transformed_result.data.columns:

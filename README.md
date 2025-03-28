@@ -358,6 +358,51 @@ shape: (6, 5)
 ```
 
 
+## Optimization
+
+The library implements several optimizations to improve performance when calculating features over time series data.
+
+### Rolling Window Optimization for `Max` and `Min`
+
+For rolling window calculations like `Max` and `Min`, a sliding window approach is used to avoid redundant calculations:
+
+1. **Small Windows**: For windows of size 3 or smaller, direct calculation is used as it's already efficient.
+
+2. **Sliding Window Technique**: For larger windows, the algorithm uses previous results when possible:
+   - For `Max`:
+     - If the new value is larger than the previous maximum, it becomes the new maximum
+     - If the value leaving the window was the previous maximum, recalculate the maximum
+     - Otherwise, keep the previous maximum
+   - For `Min`:
+     - If the new value is smaller than the previous minimum, it becomes the new minimum
+     - If the value leaving the window was the previous minimum, recalculate the minimum
+     - Otherwise, keep the previous minimum
+
+This optimization significantly reduces computation time for large rolling windows, especially when the maximum/minimum values don't change frequently.
+
+### Prefix Sum Optimization for `Sum`
+
+For calculating sums over windows, the library uses a prefix sum (cumulative sum) optimization to avoid redundant addition operations:
+
+1. **How Prefix Sums Work**: 
+   - A prefix sum array stores cumulative sums of the original array
+   - To find the sum of any window, subtract the prefix sum at the start of the window from the prefix sum at the end
+
+2. **Example**:
+   - Original array: `[3, 1, 4, 1, 5, 9]`
+   - Prefix sum array: `[0, 3, 4, 8, 9, 14, 23]` (starting with 0)
+   - To find sum of elements from index 2 to 4: `prefix_sum[5] - prefix_sum[2] = 14 - 4 = 10`
+
+3. **Performance Improvement**:
+   - Standard approach: O(n) operations per window (where n is window size)
+   - Prefix sum approach: O(1) operations per window, regardless of window size
+   - For a dataset with m windows, complexity improves from O(m×n) to O(m+n)
+
+4. **When It's Used**:
+   - Used  when `use_prefix_sum_optimization=True` and (`window size > 50` for rolling windows or for dynamic windows with any sizes)
+
+This optimization is particularly effective for large windows or when many window calculations are needed.
+
 ## License
 This project is licensed under the terms of the LICENSE file (MIT License) included in the repository.
 
