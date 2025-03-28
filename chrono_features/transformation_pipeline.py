@@ -6,7 +6,7 @@ from typing import Union
 import polars as pl
 import pandas as pd
 
-from chrono_features.features._base import FeatureGenerator
+from chrono_features.features._base import AbstractGenerator, FeatureGenerator
 from chrono_features.ts_dataset import TSDataset
 
 
@@ -56,7 +56,7 @@ class TransformationPipeline:
         ... )
     """
 
-    def __init__(self, transformations: list[FeatureGenerator], *, verbose: bool = False) -> None:
+    def __init__(self, transformations: list[AbstractGenerator], *, verbose: bool = False) -> None:
         """Initializes the transformation pipeline.
 
         Args:
@@ -70,7 +70,7 @@ class TransformationPipeline:
     def _validate_transformations(self) -> None:
         """Validates that all pipeline steps are proper FeatureGenerator instances."""
         for i, trans in enumerate(self.transformations):
-            if not isinstance(trans, FeatureGenerator):
+            if not isinstance(trans, AbstractGenerator):
                 msg = f"Transformation #{i+1} must be a FeatureGenerator, got {type(trans)}"
                 raise TypeError(msg)
 

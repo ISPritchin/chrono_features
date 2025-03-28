@@ -94,7 +94,13 @@ def calculate_length_for_each_time_series(ids: np.ndarray) -> np.ndarray:
     return ts_lens[: current_id_index + 1]
 
 
-class FeatureGenerator(ABC):
+class AbstractGenerator(ABC):
+    @abstractmethod
+    def transform(self, dataset: TSDataset) -> TSDataset:
+        raise NotImplementedError
+
+
+class FeatureGenerator(AbstractGenerator):
     def __init__(
         self,
         columns: list[str] | str,
@@ -322,3 +328,105 @@ class _FromNumbaFuncWithoutCalculatedForEachTS(FeatureGenerator):
         window_type: WindowBase,
     ) -> np.array:
         raise NotImplementedError
+
+
+class StrategySelector(AbstractGenerator, ABC):
+    """Abstract base class for feature generators with dynamic strategy selection.
+
+    This class provides a framework for implementing feature generators that can
+    dynamically select between different implementation strategies based on window type
+    and other parameters.
+    """
+
+    def __init__(
+        self,
+        *,
+        columns: list[str] | str,
+        window_types: list[WindowType] | WindowType,
+        out_column_names: list[str] | str | None = None,
+    ) -> None:
+        """Initialize the strategy selector with common parameters.
+
+        Args:
+            columns: Columns to calculate features for.
+            window_types: Types of windows to use.
+            out_column_names: Names for output columns.
+        """
+        if isinstance(columns, str):
+            self.columns = [columns]
+        else:
+            self.columns = columns
+
+        self.window_types = window_types if isinstance(window_types, list) else [window_types]
+
+        if out_column_names is not None:
+            if isinstance(out_column_names, str):
+                self.out_column_names = [out_column_names]
+            else:
+                self.out_column_names = out_column_names
+        else:
+            self.out_column_names = None
+
+    @abstractmethod
+    def _select_implementation_type(self, window_type: WindowBase) -> type:
+        """Select the appropriate implementation class based on window type.
+
+        Args:
+            window_type: The window type to process.
+
+        Returns:
+            The appropriate implementation class.
+        """
+
+    def transform(self, dataset: TSDataset) -> TSDataset:
+        """Transform the dataset using the appropriate implementation for each window type.
+
+        This implementation first groups window types by their optimal implementation,
+        then calls each implementation only once with all relevant window types.
+
+        Args:
+            dataset: The dataset to transform.
+
+        Returns:
+            The transformed dataset.
+        """
+        result = dataset.clone()
+
+        # Group window types by implementation for each column
+        for column in self.columns:
+            # Dictionary to group window types by implementation class
+            implementation_groups = {}
+
+            # Group window types by implementation class
+            for window_type in self.window_types:
+                impl_class = self._select_implementation_type(window_type)
+
+                if impl_class not in implementation_groups:
+                    implementation_groups[impl_class] = {
+                        "window_types": [],
+                    }
+
+                implementation_groups[impl_class]["window_types"].append(window_type)
+
+            # Process each implementation group
+            for impl_class, group_data in implementation_groups.items():
+                window_types = group_data["window_types"]
+
+                # Create the transformer instance with the grouped windows
+                transformer = impl_class(
+                    columns=column,
+                    window_types=window_types,
+                    out_column_names=self.out_column_names,
+                )
+
+                # Transform using the implementation
+                transformed_result = transformer.transform(dataset)
+
+                # Add all new columns from the transformed result to our result
+                for col_name in transformed_result.data.columns:
+                    # Skip the original columns
+                    if col_name in dataset.data.columns:
+                        continue
+                    result.add_feature(col_name, transformed_result.data[col_name])
+
+        return result

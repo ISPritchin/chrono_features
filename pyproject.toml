@@ -156,6 +156,7 @@ max-nested-blocks = 5
 
 [tool.pytest.ini_options]
 markers = [
-    "performance: for compare several implementations"
+    "performance: for compare several implementations",
+    "manual_running",
 ]
-addopts = "-v -s --strict-markers --testmon -m 'not performance'"
+addopts = "-v -s --strict-markers --testmon -m 'not performance and not manual_running'"

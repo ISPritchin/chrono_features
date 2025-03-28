@@ -4,8 +4,8 @@ import numpy as np
 from chrono_features.features._base import (
     _FromNumbaFuncWithoutCalculatedForEachTS,
     _FromNumbaFuncWithoutCalculatedForEachTSPoint,
+    StrategySelector,
 )
-from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase, WindowType
 
 
@@ -202,35 +202,14 @@ class SumWithoutOptimization(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         """
         return np.sum(xs)
 
-    def transform_for_window_type(self, dataset: TSDataset, column: "str", window_type: WindowBase) -> np.ndarray:
-        """Transform data for a specific window type.
 
-        For expanding windows, this method uses the optimized implementation
-        even when the standard implementation is selected.
+class Sum(StrategySelector):
+    """Factory class for creating sum feature generators with dynamic strategy selection.
 
-        Args:
-            dataset: Input time series dataset.
-            column: Column to transform.
-            window_type: Window type to use.
-
-        Returns:
-            np.ndarray: Transformed feature values.
-        """
-        if not isinstance(window_type, WindowType.EXPANDING):
-            return super().transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
-
-        return SumWithPrefixSumOptimization(
-            columns=column,
-            window_types=window_type,
-            out_column_names=None,
-        ).transform_for_window_type(dataset=dataset, column=column, window_type=window_type)
-
-
-class Sum:
-    """Factory class for creating sum feature generators.
-
-    Provides a unified interface to create either optimized or standard implementations
-    based on the user's preference.
+    Provides a unified interface that dynamically selects the optimal implementation
+    based on the window type. For expanding windows, it uses the optimized implementation,
+    while for other window types it can use either optimized or standard implementation
+    based on user preference.
 
     Examples:
         Basic usage with a single column and expanding window:
@@ -268,45 +247,67 @@ class Sum:
             90.0
         ]
 
-        Using optimization for better performance with large window_size or expanding window:
+        Using multiple window types with automatic strategy selection:
 
-        >>> # Create an optimized sum generator
-        >>> optimized_sum = Sum(
+        >>> # Create a sum generator with multiple window types
+        >>> multi_window_sum = Sum(
         ...     columns='value',
-        ...     window_types=WindowType.ROLLING(size=500),
-        ...     out_column_names='value_sum_2',
-        ...     use_prefix_sum_optimization=True
+        ...     window_types=[
+        ...         WindowType.EXPANDING(),
+        ...         WindowType.ROLLING(size=2),
+        ...         WindowType.ROLLING(size=500)
+        ...     ],
+        ...     use_prefix_sum_optimization=True  # Will be used for ROLLING(500) but not for ROLLING(2)
         ... )
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
         columns: list[str] | str,
         window_types: list[WindowType] | WindowType,
         out_column_names: list[str] | str | None = None,
         use_prefix_sum_optimization: bool = False,
-    ) -> SumWithPrefixSumOptimization | SumWithoutOptimization:
-        """Create a sum feature generator.
+    ) -> None:
+        """Initialize the sum feature generator with dynamic strategy selection.
 
         Args:
             columns: Columns to calculate sum for.
             window_types: Types of windows to use.
             out_column_names: Names for output columns.
-            use_prefix_sum_optimization: Whether to use the optimized implementation.
-
-        Returns:
-            Either SumWithPrefixSumOptimization or SumWithoutOptimization based on the
-            use_prefix_sum_optimization flag.
+            use_prefix_sum_optimization: Whether to use the optimized implementation
+                for non-expanding windows. Expanding windows always use optimization.
         """
-        if use_prefix_sum_optimization or isinstance(window_types, WindowType.EXPANDING):
-            return SumWithPrefixSumOptimization(
-                columns=columns,
-                window_types=window_types,
-                out_column_names=out_column_names,
-            )
-        return SumWithoutOptimization(
+        super().__init__(
             columns=columns,
             window_types=window_types,
             out_column_names=out_column_names,
         )
+        self.use_prefix_sum_optimization = use_prefix_sum_optimization
+
+    def _select_implementation_type(self, window_type: WindowBase) -> type:
+        """Select the appropriate implementation class based on window type and optimization flag.
+
+        Args:
+            window_type: The window type to process.
+
+        Returns:
+            The appropriate implementation class.
+        """
+        # Always use optimized implementation for expanding windows
+        if isinstance(window_type, WindowType.EXPANDING):
+            return SumWithPrefixSumOptimization
+
+        # For rolling windows, use optimization if requested or if window size is large
+        min_rolling_size_for_optimization = 50
+        if isinstance(window_type, WindowType.ROLLING) and (
+            self.use_prefix_sum_optimization or window_type.size > min_rolling_size_for_optimization
+        ):
+            return SumWithPrefixSumOptimization
+
+        # For dynamic windows, use optimization if requested
+        if isinstance(window_type, WindowType.DYNAMIC) and self.use_prefix_sum_optimization:
+            return SumWithPrefixSumOptimization
+
+        # Default to standard implementation
+        return SumWithoutOptimization

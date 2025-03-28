@@ -5,7 +5,6 @@ import pytest
 
 from chrono_features import WindowType
 from chrono_features.features import Max, Median, Sum, WeightedMovingAverage
-from chrono_features.features.sum import SumWithPrefixSumOptimization
 from chrono_features.features.mean import WeightedMean
 from chrono_features.transformation_pipeline import TransformationPipeline
 from chrono_features.ts_dataset import TSDataset
@@ -89,7 +88,7 @@ def test_multiple_different_transformations(sample_dataset):
     assert expected_columns.issubset(set(result.data.columns))
 
     # Check transformation order
-    assert pipeline.get_transformation_names() == ["Median", "SumWithPrefixSumOptimization", "WeightedMean"]
+    assert pipeline.get_transformation_names() == ["Median", "Sum", "WeightedMean"]
 
 
 @pytest.fixture
@@ -249,7 +248,7 @@ def test_pipeline_addition_operator():
     # Assert
     assert len(combined_pipeline.transformations) == 2
     assert isinstance(combined_pipeline.transformations[0], Median)
-    assert isinstance(combined_pipeline.transformations[1], SumWithPrefixSumOptimization)
+    assert isinstance(combined_pipeline.transformations[1], Sum)
 
     assert len(combined_with_single.transformations) == 2
     assert isinstance(combined_with_single.transformations[0], Median)
@@ -359,7 +358,7 @@ def test_get_transformation_names():
     names = pipeline.get_transformation_names()
 
     # Assert
-    assert names == ["Median", "SumWithPrefixSumOptimization", "WeightedMean"]
+    assert names == ["Median", "Sum", "WeightedMean"]
     assert len(names) == 3
 
 
@@ -396,7 +395,7 @@ def test_verbose_output(capsys, multi_column_dataset):
 
     # Assert
     output = captured.out
-    assert "Applying transformation 1/2: SumWithPrefixSumOptimization..." in output
+    assert "Applying transformation 1/2: Sum..." in output
     assert "Applying transformation 2/2: Median..." in output
     assert "Added columns: ['price_sum_expanding']" in output
     assert "Dataset shape:" in output
