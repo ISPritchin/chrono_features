@@ -61,6 +61,21 @@ shape: (6, 4)
 └─────┴───────────┴───────┴─────────────────────┘
 ```
 
+## Supported Transformers
+
+The following table lists all available transformers in the `chrono_features.features` package:
+
+| Transformer | Description | Main Parameters |
+|-------------|-------------|----------------|
+| `Max` | Calculates maximum value in window | `columns`, `window_types` |
+| `Min` | Calculates minimum value in window | `columns`, `window_types`|
+| `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
+| `Mean` | Calculates average of values in window | `columns`, `window_types` |
+| `Std` | Calculates standard deviation in window | `columns`, `window_types` |
+| `Median` | Calculates median value in window | `columns`, `window_types` |
+| `SimpleMovingAverage` | Calculates simple moving average | `columns`, `window_size`, `only_full_window` |
+| `WeightedMovingAverage` | Calculates weighted moving average | `columns`, `window_size`, `weights`, `only_full_window` |
+
 ## Core Concepts
 ### TSDataset
 The `TSDataset` class is a wrapper around a polars DataFrame that provides additional functionality for time series data
