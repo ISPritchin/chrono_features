@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from chrono_features import WindowType
-from chrono_features.features import Max
-from tests.utils.performance import create_dataset_with_dynamic_windows, performance_comparison
+from chrono_features.features.max import MaxWithOptimization, MaxWithoutOptimization, Max
+from tests.utils.performance import create_dataset_with_dynamic_windows, compare_performance
 
 
 @pytest.mark.performance
@@ -18,26 +18,31 @@ def test_performance_comparison() -> None:
 
     # Define window types to test
     window_types = [
-        (WindowType.EXPANDING(), "expanding"),
-        (WindowType.ROLLING(size=10), "rolling_10"),
-        (WindowType.ROLLING(size=100), "rolling_100"),
-        (WindowType.ROLLING(size=1000), "rolling_1000"),
-        (WindowType.DYNAMIC(len_column_name="dynamic_len"), "dynamic"),
+        WindowType.EXPANDING(),
+        WindowType.ROLLING(size=10),
+        WindowType.ROLLING(size=100),
+        WindowType.ROLLING(size=1000),
+        WindowType.DYNAMIC(len_column_name="dynamic_len"),
     ]
 
-    # Create transformer instances using list comprehension
-    transformers = [
-        Max(
-            columns="value",
-            window_types=window_type,
-            out_column_names=[f"max_{name}"],
+    # Define implementations to test
+    implementations = [
+        (MaxWithOptimization, "optimized"),
+        (MaxWithoutOptimization, "non_optimized"),
+        (Max, "strategy_selector"),
+    ]
+
+    # Output file path
+    output_file = str(Path(__file__).absolute().parent / "performance_results.xlsx")
+
+    # Run the performance comparison for each dataset
+    for dataset_name, dataset in datasets.items():
+        # Run the performance comparison
+        compare_performance(
+            dataset=dataset,
+            implementations=implementations,
+            window_types=window_types,
+            column_name="value",
+            output_file=output_file,
+            dataset_name=dataset_name,
         )
-        for window_type, name in window_types
-    ]
-
-    # Run the performance comparison
-    performance_comparison(
-        datasets=datasets,
-        transformers=transformers,
-        output_xlsx_file_path=Path(__file__).absolute().parent / "performance_results.xlsx",
-    )

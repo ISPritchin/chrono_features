@@ -1,172 +1,18 @@
-# ruff: noqa: C901, PLR0912, PLR0915, ISC003
-
-import platform
+# ruff: noqa: C901, PLR0912, PLR0915, ISC003, T201
 import time
+import platform
+import psutil
 from pathlib import Path
-from typing import Callable
 
 import numpy as np
 import pandas as pd
 import polars as pl
-import psutil
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
+from openpyxl import Workbook, load_workbook
+from openpyxl.styles import Font
 from openpyxl.utils import get_column_letter
-from openpyxl.utils.dataframe import dataframe_to_rows
 
 from chrono_features import TSDataset, WindowType
 from chrono_features.features._base import FeatureGenerator
-
-
-def performance_comparison(
-    datasets: dict[str, TSDataset],
-    transformers: list[FeatureGenerator],
-    output_xlsx_file_path: str | Path,
-) -> None:
-    """
-    Run performance comparison for multiple transformers across different datasets.
-
-    Args:
-        datasets: Dictionary mapping dataset names to TSDataset instances
-        transformers: List of transformer instances to test
-        output_xlsx_file_path: Path to the output Excel file
-    """
-    # Create output directory if it doesn't exist
-    Path(output_xlsx_file_path.parent).mkdir(exist_ok=True, parents=True)
-
-    try:
-        system_info = {
-            "OS": platform.system() + " " + platform.release(),
-            "Python Version": platform.python_version(),
-            "CPU": platform.processor(),
-            "CPU Cores": psutil.cpu_count(logical=False),
-            "CPU Threads": psutil.cpu_count(logical=True),
-            "Total RAM (GB)": round(psutil.virtual_memory().total / (1024**3), 2),
-            "Available RAM (GB)": round(psutil.virtual_memory().available / (1024**3), 2),
-        }
-    except ImportError:
-        system_info = {
-            "OS": platform.system() + " " + platform.release(),
-            "Python Version": platform.python_version(),
-            "CPU": platform.processor(),
-        }
-
-    # Store all results
-    all_results = []
-    all_dataset_infos = {}
-
-    # Process each dataset
-    for dataset_name, dataset in datasets.items():
-        # Collect dataset information
-        n_ids = dataset.data[dataset.id_column_name].n_unique()
-        n_timestamps_per_id = len(dataset.data) // n_ids
-        total_rows = len(dataset.data)
-        memory_usage_mb = dataset.data.estimated_size() / (1024 * 1024)
-
-        dataset_info = {
-            "Dataset name": dataset_name,
-            "Number of unique IDs": n_ids,
-            "Timestamps per ID": n_timestamps_per_id,
-            "Total rows": total_rows,
-            "Memory usage (MB)": round(memory_usage_mb, 2),
-            "Test date": time.strftime("%Y-%m-%d %H:%M:%S"),
-            **system_info,
-        }
-
-        # Store dataset info for later use
-        all_dataset_infos[dataset_name] = dataset_info
-
-        # Process each transformer
-        for transformer in transformers:
-            # Get transformer name
-            transformer_name = transformer.__class__.__name__
-
-            # Extract transformer parameters
-            transformer_params = {}
-
-            for attr_name in dir(transformer):
-                # Skip private attributes, methods, and callables
-                if attr_name.startswith("_") or callable(getattr(transformer, attr_name)):
-                    continue
-
-                # Get important parameters
-                if attr_name in ["columns", "window_types", "out_column_names"]:
-                    transformer_params[attr_name] = getattr(transformer, attr_name)
-
-                # Check for optimization flags with various possible names
-                if attr_name in ["use_prefix_sum_optimization", "use_optimization", "optimized"]:
-                    transformer_params[attr_name] = getattr(transformer, attr_name)
-
-            # Format parameters as string
-            params_str = ", ".join([f"{k}={v}" for k, v in transformer_params.items()])
-
-            # Run the transformation and measure time
-            start_time = time.time()
-            transformed_dataset = transformer.transform(dataset)
-            execution_time = time.time() - start_time
-
-            # Get output column names and metadata
-            if hasattr(transformer, "out_column_names") and transformer.out_column_names:
-                for out_col in transformer.out_column_names:
-                    # Get implementation metadata if available
-                    implementation_class = transformer_name
-
-                    # Check for metadata in the transformed dataset
-                    if (
-                        hasattr(transformed_dataset, "_feature_metadata")
-                        and out_col in transformed_dataset._feature_metadata
-                    ):
-                        metadata = transformed_dataset._feature_metadata[out_col]
-                        if "implementation_class" in metadata:
-                            implementation_class = metadata["implementation_class"]
-
-                    # Check for metadata in the transformer
-                    elif hasattr(transformer, "implementation_metadata"):
-                        # Try to find metadata for this column
-                        for value in transformer.implementation_metadata.values():
-                            if "implementation_class" in value:
-                                implementation_class = value["implementation_class"]
-                                break
-
-                    # Store result with implementation metadata
-                    result = {
-                        "dataset_size": dataset_name,
-                        "dataset_info": dataset_info,
-                        "transformer": transformer_name,
-                        "implementation_class": implementation_class,
-                        "transformer_params": params_str,
-                        "execution_time": execution_time,
-                        "output_column": out_col,
-                    }
-
-                    all_results.append(result)
-            else:
-                # Fallback for transformers without out_column_names
-                result = {
-                    "dataset_size": dataset_name,
-                    "dataset_info": dataset_info,
-                    "transformer": transformer_name,
-                    "implementation_class": transformer_name,
-                    "transformer_params": params_str,
-                    "execution_time": execution_time,
-                }
-
-                all_results.append(result)
-
-    # Create combined dataset info
-    combined_info = {
-        "Test type": "Performance comparison",
-        "Datasets tested": ", ".join(datasets.keys()),
-        "Transformers tested": ", ".join({r["transformer"] for r in all_results}),
-        "Test date": time.strftime("%Y-%m-%d %H:%M:%S"),
-        "System": system_info.get("OS", "Unknown"),
-        "Python Version": system_info.get("Python Version", "Unknown"),
-        "CPU": system_info.get("CPU", "Unknown"),
-        "CPU Cores/Threads": f"{system_info.get('CPU Cores', 'Unknown')}/{system_info.get('CPU Threads', 'Unknown')}",
-        "Total RAM (GB)": system_info.get("Total RAM (GB)", "Unknown"),
-    }
-
-    save_results_to_excel(all_results, combined_info, output_xlsx_file_path)
 
 
 def create_dataset(n_ids: int, n_timestamps: int) -> TSDataset:
@@ -207,232 +53,223 @@ def create_dataset_with_dynamic_windows(n_ids, n_timestamps, max_window_size=100
     return dataset
 
 
-def run_performance_test(
+def compare_performance(
     dataset: TSDataset,
-    transformer_factory: Callable[[bool, WindowType, str], FeatureGenerator],
-    window_type: WindowType,
-    window_desc: str,
-    *,
-    use_optimization: bool,
-) -> dict:
-    """
-    Run a single performance test and return timing results.
+    implementations: list[tuple[type[FeatureGenerator], str]],
+    window_types: list[WindowType],
+    column_name: str = "value",  # Renamed from 'column' to 'column_name' to avoid redefining argument
+    output_file: str | None = None,
+    dataset_name: str = "Default",
+) -> pd.DataFrame:
+    """Compare performance of multiple implementations across different window types."""
+    results = []
 
-    Args:
-        dataset: The dataset to transform
-        transformer_factory: A function that creates a transformer instance
-        window_type: The window type to use
-        window_desc: A string description of the window type
-        use_optimization: Whether to use optimization
+    # Process each window type
+    for window_type in window_types:
+        window_info = str(window_type)
 
-    Returns:
-        Dict with test results
-    """
-    # Create transformer using the factory function
-    transformer = transformer_factory(use_optimization, window_type, window_desc)
+        # Apply each implementation
+        for impl_class, name in implementations:
+            # Skip if any previous implementation for this window exceeded max time
 
-    # Get output column name from transformer
-    if hasattr(transformer, "out_column_names") and transformer.out_column_names:
-        out_col = transformer.out_column_names[0]
-    else:
-        out_col = f"result_{window_desc}_{'opt' if use_optimization else 'no_opt'}"
+            # Create transformer
+            transformer = impl_class(
+                columns=column_name,  # Use column_name instead of column
+                window_types=window_type,
+                out_column_names=f"{name}_result",
+            )
 
-    # Run the transformation and measure time
-    start_time = time.time()
-    transformed_dataset = transformer.transform(dataset)
-    execution_time = time.time() - start_time
+            # Measure execution time
+            start_time = time.time()
+            try:
+                _ = transformer.transform(dataset.clone())
+                execution_time = time.time() - start_time
 
-    return {
-        "window_type": window_desc,
-        "window_params": str(window_type),
-        "optimization": "Yes" if use_optimization else "No",
-        "execution_time": execution_time,
-        "output_column": out_col,
-        "result": transformed_dataset.data[out_col].to_numpy(),
-    }
+                # Create result dictionary with all required fields
+                dataset_size = (
+                    f"{len(dataset.data)} rows "  # Split long line
+                    f"({dataset.data[dataset.id_column_name].n_unique()} IDs)"
+                )
+                result = {
+                    "dataset_size": dataset_size,
+                    "window_type": window_info,
+                    f"{name}_time": execution_time,
+                    "transformer": name,
+                    "implementation_class": impl_class.__name__,
+                    "execution_time": execution_time,
+                    "dataset_info": {
+                        "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+                        "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
+                        "Total rows": len(dataset.data),
+                    },
+                }
 
+                results.append(result)
 
-def save_results_to_excel(results: list[dict], dataset_info: dict, filename: str) -> None:
-    """Save performance test results to an Excel file."""
-    # Create dataset info dataframe
-    info_data = [[key, value] for key, value in dataset_info.items()]
-    info_df = pd.DataFrame(info_data, columns=["Metric", "Value"])
+            except Exception as e:  # noqa: BLE001
+                print(f"Error with {name} on {window_type}: {e!s}")
+                # Still add a result with the error
+                dataset_size = (
+                    f"{len(dataset.data)} rows "  # Split long line
+                    f"({dataset.data[dataset.id_column_name].n_unique()} IDs)"
+                )
+                results.append(
+                    {
+                        "dataset_size": dataset_size,
+                        "window_type": window_info,
+                        f"{name}_time": f"error: {e!s}",
+                        "transformer": name,
+                        "implementation_class": impl_class.__name__,
+                        "execution_time": f"error: {e!s}",
+                        "dataset_info": {
+                            "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+                            "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
+                            "Total rows": len(dataset.data),
+                        },
+                    },
+                )
 
-    # Create performance results dataframe
-    perf_data = []
+    results_df = pd.DataFrame(results)
 
-    # Simplify results to just include dataset, transformer, and time
-    for result in results:
-        # Format transformer parameters with each parameter on a new line
-        params_str = result.get("transformer_params", "")
-        formatted_params = params_str.replace(", ", "\n")
+    # Save to Excel file if requested
+    if output_file:
+        # Check if file exists to determine if we need to create a new workbook or append to existing
+        if Path(output_file).exists():  # Use Path.exists() instead of os.path.exists()
+            # Load existing workbook
+            wb = load_workbook(output_file)
 
-        # Get implementation class from metadata if available
-        implementation_class = "Unknown"
-        if "implementation_class" in result:
-            implementation_class = result["implementation_class"]
-        elif "metadata" in result and "implementation_class" in result["metadata"]:
-            implementation_class = result["metadata"]["implementation_class"]
-
-        # Create a descriptive transformer name using implementation metadata
-        transformer_name = result.get("transformer", "Unknown")
-        if implementation_class != "Unknown":
-            transformer_display = f"{transformer_name} ({implementation_class})"
+            # Remove unwanted sheets if they exist
+            sheets_to_remove = ["Test Information", "Datasets Comparison", "Performance Results"]
+            for sheet_name in sheets_to_remove:
+                if sheet_name in wb.sheetnames:
+                    del wb[sheet_name]
         else:
-            transformer_display = transformer_name
+            # Create a new workbook
+            wb = Workbook()
+            # Remove default sheet
+            if "Sheet" in wb.sheetnames:
+                del wb["Sheet"]
 
-        perf_data.append(
+        # Create or get sheet for this dataset
+        sheet_name = f"{dataset_name} Results"
+        if sheet_name in wb.sheetnames:
+            # Instead of clearing cells, delete the sheet and create a new one
+            del wb[sheet_name]
+            sheet = wb.create_sheet(title=sheet_name)
+        else:
+            sheet = wb.create_sheet(title=sheet_name)
+
+        # Add title
+        sheet["A1"] = f"PERFORMANCE RESULTS - {dataset_name.upper()} DATASET"
+        sheet["A1"].font = Font(bold=True, size=14)
+        sheet.merge_cells("A1:F1")
+
+        # Add dataset description
+        row = 3
+        sheet[f"A{row}"] = "Dataset Information"
+        sheet[f"A{row}"].font = Font(bold=True)
+        sheet.merge_cells(f"A{row}:F{row}")
+        row += 1
+
+        # Add dataset details
+        dataset_info = {
+            "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+            "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
+            "Total rows": len(dataset.data),
+            "Test date": time.strftime("%Y-%m-%d %H:%M:%S"),
+        }
+
+        # Add system info if available
+        dataset_info.update(
             {
-                "Dataset Name": result.get("dataset_size", "unknown"),
-                "Dataset Parameters": f"IDs: {result['dataset_info'].get('Number of unique IDs', 'N/A')}, "
-                + f"Timestamps: {result['dataset_info'].get('Timestamps per ID', 'N/A')}, "
-                + f"Total Rows: {result['dataset_info'].get('Total rows', 'N/A')}",
-                "Implementation": transformer_display,
-                "Transformer Parameters": formatted_params,
-                "Time (s)": result["execution_time"],
+                "OS": platform.system() + " " + platform.release(),
+                "Python Version": platform.python_version(),
+                "CPU": platform.processor(),
+                "CPU Cores": psutil.cpu_count(logical=False),
+                "CPU Threads": psutil.cpu_count(logical=True),
+                "Total RAM (GB)": round(psutil.virtual_memory().total / (1024**3), 2),
             },
         )
 
-    # Create DataFrame and sort by Dataset Name and then by Implementation
-    perf_df = pd.DataFrame(perf_data)
-    perf_df = perf_df.sort_values(by=["Dataset Name", "Implementation", "Transformer Parameters"])
+        # Write dataset info
+        for key, value in dataset_info.items():
+            sheet[f"A{row}"] = key
+            sheet[f"B{row}"] = str(value)
+            sheet[f"A{row}"].font = Font(italic=True)
+            row += 1
 
-    # Create Excel workbook
-    wb = Workbook()
+        # Add empty row
+        row += 1
 
-    # Dataset info sheet
-    info_sheet = wb.active
-    info_sheet.title = "Test Information"
+        # Add results header
+        sheet[f"A{row}"] = "Performance Results"
+        sheet[f"A{row}"].font = Font(bold=True)
+        sheet.merge_cells(f"A{row}:C{row}")
+        row += 2
 
-    # Add title
-    info_sheet["A1"] = "TEST INFORMATION"
-    info_sheet["A1"].font = Font(bold=True, size=14)
-    info_sheet.merge_cells("A1:B1")
+        # Prepare data for Excel - create a more readable format
+        for window_type in window_types:
+            window_str = str(window_type)
+            window_results = [r for r in results if r["window_type"] == window_str]
 
-    # Add data
-    for r_idx, row in enumerate(dataframe_to_rows(info_df, index=False, header=True), 2):
-        for c_idx, value in enumerate(row, 1):
-            cell = info_sheet.cell(row=r_idx, column=c_idx, value=value)
-            # Add alignment for all cells
-            if c_idx in {1, 2}:  # Value column
-                cell.alignment = Alignment(horizontal="left")
+            if window_results:
+                # Add window type as a header row
+                sheet[f"A{row}"] = window_str
+                sheet[f"A{row}"].font = Font(bold=True)
+                sheet.merge_cells(f"A{row}:C{row}")
+                row += 1
 
-    # Auto-adjust column widths for info sheet
-    for column in info_sheet.columns:
-        max_length = 0
-        column_letter = get_column_letter(column[0].column)
-        for cell in column:
-            if cell.value:
-                cell_length = len(str(cell.value))
-                max_length = max(max_length, cell_length)
-        adjusted_width = max_length + 2  # Add padding
-        info_sheet.column_dimensions[column_letter].width = adjusted_width
+                # Add column headers
+                sheet[f"B{row}"] = "Implementation"
+                sheet[f"C{row}"] = "Time (s)"
+                sheet[f"B{row}"].font = Font(bold=True)
+                sheet[f"C{row}"].font = Font(bold=True)
+                row += 1
 
-    # Create datasets comparison sheet
-    datasets_sheet = wb.create_sheet(title="Datasets Comparison")
+                # Add results for each implementation
+                for _, name in implementations:  # Use _ for unused impl_class variable
+                    # Find result for this implementation
+                    impl_result = next((r for r in window_results if r["transformer"] == name), None)
 
-    # Extract dataset-specific information from results
-    dataset_comparison_data = []
-    dataset_sizes = {r.get("dataset_size", "unknown") for r in results}
+                    if impl_result:
+                        time_value = impl_result.get(f"{name}_time", "N/A")
+                        time_str = f"{time_value:.6f}" if isinstance(time_value, (int, float)) else str(time_value)
 
-    for dataset_size in dataset_sizes:
-        # Find any result for this dataset to extract dataset info
-        dataset_result = next((r for r in results if r.get("dataset_size") == dataset_size), None)
-        if dataset_result and "dataset_info" in dataset_result:
-            dataset_info = dataset_result["dataset_info"]
-            dataset_comparison_data.append(
-                {
-                    "Dataset": dataset_size,
-                    "IDs": dataset_info.get("Number of unique IDs", "N/A"),
-                    "Timestamps per ID": dataset_info.get("Timestamps per ID", "N/A"),
-                    "Total Rows": dataset_info.get("Total rows", "N/A"),
-                    "Memory (MB)": dataset_info.get("Memory usage (MB)", "N/A"),
-                },
-            )
+                        sheet[f"B{row}"] = f"{name} ({impl_result['implementation_class']})"
+                        sheet[f"C{row}"] = time_str
 
-    # Add title to datasets sheet
-    datasets_sheet["A1"] = "DATASETS COMPARISON"
-    datasets_sheet["A1"].font = Font(bold=True, size=14)
-    datasets_sheet.merge_cells("A1:E1")
+                        # Highlight implementation classes
+                        if (
+                            "WithOptimization" in impl_result["implementation_class"]
+                            or "Optimized" in impl_result["implementation_class"]
+                        ):
+                            sheet[f"B{row}"].font = Font(color="006100")  # Dark green
+                        elif (
+                            "WithoutOptimization" in impl_result["implementation_class"]
+                            or "Standard" in impl_result["implementation_class"]
+                        ):
+                            sheet[f"B{row}"].font = Font(color="9C0006")  # Dark red
 
-    # Create DataFrame for datasets comparison
-    datasets_df = pd.DataFrame(dataset_comparison_data)
+                        row += 1
 
-    # Add datasets comparison data
-    for r_idx, row in enumerate(dataframe_to_rows(datasets_df, index=False, header=True), 2):
-        for c_idx, value in enumerate(row, 1):
-            datasets_sheet.cell(row=r_idx, column=c_idx, value=value)
+                # Add empty row between window types
+                row += 1
 
-    # Auto-adjust column widths for datasets sheet
-    for column in datasets_sheet.columns:
-        max_length = 0
-        column_letter = get_column_letter(column[0].column)
-        for cell in column:
-            if cell.value:
-                cell_length = len(str(cell.value))
-                max_length = max(max_length, cell_length)
-        adjusted_width = max_length + 2  # Add padding
-        datasets_sheet.column_dimensions[column_letter].width = adjusted_width
-
-    # Performance results sheet
-    perf_sheet = wb.create_sheet(title="Performance Results")
-
-    # Add title
-    perf_sheet["A1"] = "PERFORMANCE RESULTS"
-    perf_sheet["A1"].font = Font(bold=True, size=14)
-    perf_sheet.merge_cells("A1:E1")
-
-    # Add data
-    for r_idx, row in enumerate(dataframe_to_rows(perf_df, index=False, header=True), 2):
-        for c_idx, value in enumerate(row, 1):
-            cell = perf_sheet.cell(row=r_idx, column=c_idx, value=value)
-
-            # Format time with 6 decimal places
-            if c_idx == 5 and r_idx > 2:  # Time column
-                cell.value = f"{value:.6f}"
-
-            # Set text alignment for transformer parameters to allow line breaks
-            if c_idx == 4 and r_idx > 2:  # Transformer Parameters column
-                cell.alignment = Alignment(wrap_text=True, vertical="top")
-
-            # Highlight implementation classes
-            if c_idx == 3 and r_idx > 2:  # Implementation column
-                if "WithOptimization" in str(value) or "Optimized" in str(value):
-                    cell.font = Font(color="006100")  # Dark green
-                elif "WithoutOptimization" in str(value) or "Standard" in str(value):
-                    cell.font = Font(color="9C0006")  # Dark red
-
-    # Auto-adjust column widths for performance sheet
-    column_max_lengths = {}
-    for column in perf_sheet.columns:
-        max_length = 0
-        column_letter = get_column_letter(column[0].column)
-        for cell in column:
-            if cell.value:
-                # For multiline content, check each line
-                if isinstance(cell.value, str) and "\n" in cell.value:
-                    lines = cell.value.split("\n")
-                    for line in lines:
-                        max_length = max(max_length, len(line))
-                else:
+        # Auto-adjust column widths
+        for column in sheet.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                if cell.value:
                     cell_length = len(str(cell.value))
                     max_length = max(max_length, cell_length)
 
-        # Set minimum and maximum widths
-        adjusted_width = min(max(max_length + 2, 15), 60)  # Min 15, Max 60
-        column_max_lengths[column_letter] = max_length
-        perf_sheet.column_dimensions[column_letter].width = adjusted_width
+            # Set minimum and maximum widths
+            adjusted_width = min(max(max_length + 2, 15), 60)  # Min 15, Max 60
+            sheet.column_dimensions[column_letter].width = adjusted_width
 
-    # Auto-adjust row heights for the parameter cells
-    for row in range(3, perf_sheet.max_row + 1):
-        # Get the transformer parameters cell in column D (4)
-        param_cell = perf_sheet.cell(row=row, column=4)
-        if param_cell.value and isinstance(param_cell.value, str):
-            # Count number of lines
-            num_lines = param_cell.value.count("\n") + 1
-            # Set row height based on number of lines (approximately 15 points per line)
-            row_height = max(20, min(num_lines * 15, 150))  # Min 20, Max 150
-            perf_sheet.row_dimensions[row].height = row_height
+        # Save workbook
+        wb.save(output_file)
+        print(f"Results for {dataset_name} dataset saved to Excel file: {output_file}")
 
-    # Save workbook
-    wb.save(filename)
+    return results_df
