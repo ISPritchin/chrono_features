@@ -2,6 +2,24 @@
 
 A Python library for efficient time series feature generation with support for various window types and optimized calculations.
 
+## Table of Contents
+- [Installation](#installation)
+- [Overview](#overview)
+- [Core Concepts](#core-concepts)
+  - [TSDataset](#tsdataset)
+  - [Window Types](#window-types)
+  - [Transformation Pipeline](#transformation-pipeline)
+- [Examples](#examples)
+  - [Calculating Multiple Features](#calculating-multiple-features)
+  - [Using Dynamic Windows](#using-dynamic-windows)
+- [Supported Transformers](#supported-transformers)
+- [Optimization](#optimization)
+  - [Rolling Window Optimization for Max and Min](#rolling-window-optimization-for-max-and-min)
+  - [Prefix Sum Optimization for Sum](#prefix-sum-optimization-for-sum)
+  - [Prefix Sum Optimization for Absolute Sum of Changes](#prefix-sum-optimization-for-absolute-sum-of-changes)
+- [License](#license)
+- [Contributing](#contributing)
+
 ## Installation
 
 ```bash
@@ -60,21 +78,6 @@ shape: (6, 4)
 │ 2   ┆ 3         ┆ 6     ┆ 6.0                 │
 └─────┴───────────┴───────┴─────────────────────┘
 ```
-
-## Supported Transformers
-
-The following table lists all available transformers in the `chrono_features.features` package:
-
-| Transformer | Description | Parameters |
-| ----------- | ----------- | ---------- |
-| `Max` | Calculates maximum value in window | `columns`, `window_types` |
-| `Min` | Calculates the minimum value in window| `columns`, `window_types`|
-| `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
-| `Mean` | Calculates average of values in window | `columns`, `window_types` |
-| `Std` | Calculates standard deviation in window | `columns`, `window_types` |
-| `Median` | Calculates median value in window | `columns`, `window_types` |
-| `SimpleMovingAverage` | Calculates simple moving average | `columns`, `window_size`, `only_full_window` |
-| `WeightedMovingAverage` | Calculates weighted moving average | `columns`, `window_size`, `weights`, `only_full_window` |
 
 ## Core Concepts
 ### TSDataset
@@ -347,7 +350,7 @@ shape: (6, 5)
 │ id  ┆ timestamp ┆ value ┆ window_len ┆ value_max_dynamic_based_on_win… │
 │ --- ┆ ---       ┆ ---   ┆ ---        ┆ ---                             │
 │ i64 ┆ i64       ┆ i64   ┆ i64        ┆ f32                             │
-╞═════╪═══════════╪═══════╪════════════╪═════════════════════════════════╡
+╞═════╪═══════════╪═══════╪════════════╪══════════════════════════════╡
 │ 1   ┆ 1         ┆ 1     ┆ 1          ┆ 1.0                             │
 │ 1   ┆ 2         ┆ 2     ┆ 2          ┆ 2.0                             │
 │ 1   ┆ 3         ┆ 3     ┆ 3          ┆ 3.0                             │
@@ -357,6 +360,20 @@ shape: (6, 5)
 └─────┴───────────┴───────┴────────────┴─────────────────────────────────┘
 ```
 
+## Supported Transformers
+
+The following table lists all available transformers in the `chrono_features.features` package:
+
+| Transformer | Description | Parameters |
+| ----------- | ----------- | ---------- |
+| `Max` | Calculates maximum value in window | `columns`, `window_types` |
+| `Min` | Calculates the minimum value in window| `columns`, `window_types`|
+| `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
+| `Mean` | Calculates average of values in window | `columns`, `window_types` |
+| `Std` | Calculates standard deviation in window | `columns`, `window_types` |
+| `Median` | Calculates median value in window | `columns`, `window_types` |
+| `SimpleMovingAverage` | Calculates simple moving average | `columns`, `window_size`, `only_full_window` |
+| `WeightedMovingAverage` | Calculates weighted moving average | `columns`, `window_size`, `weights`, `only_full_window` |
 
 ## Optimization
 

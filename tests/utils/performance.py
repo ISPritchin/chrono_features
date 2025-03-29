@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 from openpyxl import Workbook, load_workbook
-from openpyxl.styles import Font
+from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 
 from chrono_features import TSDataset, WindowType
@@ -31,16 +31,7 @@ def create_dataset(n_ids: int, n_timestamps: int) -> TSDataset:
 
 
 def create_dataset_with_dynamic_windows(n_ids, n_timestamps, max_window_size=1000):
-    """Create a dataset with an additional column for dynamic window lengths.
-
-    Args:
-        n_ids: Number of unique IDs in the dataset.
-        n_timestamps: Number of timestamps per ID.
-        max_window_size: Maximum value for dynamic window length (default: 1000).
-
-    Returns:
-        TSDataset with added dynamic window length column.
-    """
+    """Create a dataset with an additional column for dynamic window lengths."""
     dataset = create_dataset(n_ids=n_ids, n_timestamps=n_timestamps)
 
     # Add a single dynamic window length column
@@ -54,206 +45,264 @@ def create_dataset_with_dynamic_windows(n_ids, n_timestamps, max_window_size=100
 
 
 def compare_performance(
-    dataset: TSDataset,
+    datasets: list[tuple[TSDataset, str]],
     implementations: list[tuple[type[FeatureGenerator], str]],
     window_types: list[WindowType],
-    column_name: str = "value",  # Renamed from 'column' to 'column_name' to avoid redefining argument
+    column_name: str = "value",
     output_file: str | None = None,
-    dataset_name: str = "Default",
 ) -> pd.DataFrame:
-    """Compare performance of multiple implementations across different window types."""
-    results = []
+    """Compare performance of multiple implementations across different window types and datasets."""
+    all_results = []
 
-    # Process each window type
-    for window_type in window_types:
-        window_info = str(window_type)
+    # Get system info
+    system_info = {
+        "Test date": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "OS": platform.system() + " " + platform.release(),
+        "Python Version": platform.python_version(),
+        "CPU": platform.processor(),
+        "CPU Cores": psutil.cpu_count(logical=False),
+        "CPU Threads": psutil.cpu_count(logical=True),
+        "Total RAM (GB)": round(psutil.virtual_memory().total / (1024**3), 2),
+    }
 
-        # Apply each implementation
-        for impl_class, name in implementations:
-            # Skip if any previous implementation for this window exceeded max time
+    # Process each dataset and collect additional info
+    dataset_additional_info = {}
+    for dataset, dataset_name in datasets:
+        # Check if dynamic_len column exists and get max value
+        if "dynamic_len" in dataset.data.columns:
+            max_dynamic_len = dataset.data["dynamic_len"].max()
+            if dataset_name not in dataset_additional_info:
+                dataset_additional_info[dataset_name] = {}
+            dataset_additional_info[dataset_name]["Max dynamic_len"] = max_dynamic_len
 
-            # Create transformer
-            transformer = impl_class(
-                columns=column_name,  # Use column_name instead of column
-                window_types=window_type,
-                out_column_names=f"{name}_result",
-            )
+    # Process each dataset
+    for dataset, dataset_name in datasets:
+        # Process each window type
+        for window_type in window_types:
+            window_info = str(window_type)
 
-            # Measure execution time
-            start_time = time.time()
-            try:
-                _ = transformer.transform(dataset.clone())
-                execution_time = time.time() - start_time
-
-                # Create result dictionary with all required fields
-                dataset_size = (
-                    f"{len(dataset.data)} rows "  # Split long line
-                    f"({dataset.data[dataset.id_column_name].n_unique()} IDs)"
+            # Apply each implementation
+            for impl_class, name in implementations:
+                # Create transformer
+                transformer = impl_class(
+                    columns=column_name,
+                    window_types=window_type,
+                    out_column_names=f"{name}_result",
                 )
-                result = {
-                    "dataset_size": dataset_size,
-                    "window_type": window_info,
-                    f"{name}_time": execution_time,
-                    "transformer": name,
-                    "implementation_class": impl_class.__name__,
-                    "execution_time": execution_time,
-                    "dataset_info": {
-                        "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
-                        "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
-                        "Total rows": len(dataset.data),
-                    },
-                }
 
-                results.append(result)
+                # Measure execution time
+                start_time = time.time()
+                try:
+                    _ = transformer.transform(dataset.clone())
+                    execution_time = time.time() - start_time
 
-            except Exception as e:  # noqa: BLE001
-                print(f"Error with {name} on {window_type}: {e!s}")
-                # Still add a result with the error
-                dataset_size = (
-                    f"{len(dataset.data)} rows "  # Split long line
-                    f"({dataset.data[dataset.id_column_name].n_unique()} IDs)"
-                )
-                results.append(
-                    {
-                        "dataset_size": dataset_size,
+                    # Create result dictionary
+                    result = {
+                        "dataset_name": dataset_name,
                         "window_type": window_info,
-                        f"{name}_time": f"error: {e!s}",
-                        "transformer": name,
-                        "implementation_class": impl_class.__name__,
-                        "execution_time": f"error: {e!s}",
+                        "implementation": f"{name} ({impl_class.__name__})",
+                        "execution_time": execution_time,
                         "dataset_info": {
                             "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
                             "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
                             "Total rows": len(dataset.data),
                         },
-                    },
-                )
+                    }
+                    all_results.append(result)
 
-    results_df = pd.DataFrame(results)
+                except Exception as e:  # noqa: BLE001
+                    print(f"Error with {name} on {window_type} for {dataset_name}: {e!s}")
+                    # Add result with error
+                    all_results.append(
+                        {
+                            "dataset_name": dataset_name,
+                            "window_type": window_info,
+                            "implementation": f"{name} ({impl_class.__name__})",
+                            "execution_time": f"error: {e!s}",
+                            "dataset_info": {
+                                "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+                                "Timestamps per ID": len(dataset.data)
+                                // dataset.data[dataset.id_column_name].n_unique(),
+                                "Total rows": len(dataset.data),
+                            },
+                        },
+                    )
 
     # Save to Excel file if requested
     if output_file:
-        # Check if file exists to determine if we need to create a new workbook or append to existing
-        if Path(output_file).exists():  # Use Path.exists() instead of os.path.exists()
-            # Load existing workbook
+        # Create a new workbook or load existing
+        if Path(output_file).exists():
             wb = load_workbook(output_file)
-
-            # Remove unwanted sheets if they exist
-            sheets_to_remove = ["Test Information", "Datasets Comparison", "Performance Results"]
-            for sheet_name in sheets_to_remove:
-                if sheet_name in wb.sheetnames:
-                    del wb[sheet_name]
         else:
-            # Create a new workbook
             wb = Workbook()
-            # Remove default sheet
+            # Remove default sheet if it exists
             if "Sheet" in wb.sheetnames:
                 del wb["Sheet"]
 
-        # Create or get sheet for this dataset
-        sheet_name = f"{dataset_name} Results"
+        # Determine sheet name based on implementations
+        # Extract base class name without "WithOptimization" or "WithoutOptimization"
+        base_class_names = set()
+        for impl_class, _ in implementations:
+            class_name = impl_class.__name__
+            if "WithOptimization" in class_name:
+                base_name = class_name.replace("WithOptimization", "")
+                base_class_names.add(base_name)
+            elif "WithoutOptimization" in class_name:
+                base_name = class_name.replace("WithoutOptimization", "")
+                base_class_names.add(base_name)
+            else:
+                base_class_names.add(class_name)
+
+        sheet_name = ", ".join(sorted(base_class_names))
+
+        # Create or get sheet
         if sheet_name in wb.sheetnames:
-            # Instead of clearing cells, delete the sheet and create a new one
-            del wb[sheet_name]
-            sheet = wb.create_sheet(title=sheet_name)
-        else:
-            sheet = wb.create_sheet(title=sheet_name)
+            del wb[sheet_name]  # Replace existing sheet
+        sheet = wb.create_sheet(title=sheet_name)
 
-        # Add title
-        sheet["A1"] = f"PERFORMANCE RESULTS - {dataset_name.upper()} DATASET"
-        sheet["A1"].font = Font(bold=True, size=14)
-        sheet.merge_cells("A1:F1")
+        # Add title for system info
+        sheet["B1"] = "Stend description"
+        sheet["B1"].font = Font(bold=True)
 
-        # Add dataset description
+        # Динамически определяем количество столбцов для объединения ячеек
+        # Учитываем количество датасетов + 2 столбца (B и C)
+        last_col = get_column_letter(len(datasets) + 2)
+        sheet.merge_cells(f"B1:{last_col}1")
+        sheet["B1"].alignment = Alignment(horizontal="center")
+
+        # Add system info
         row = 3
-        sheet[f"A{row}"] = "Dataset Information"
-        sheet[f"A{row}"].font = Font(bold=True)
-        sheet.merge_cells(f"A{row}:F{row}")
-        row += 1
-
-        # Add dataset details
-        dataset_info = {
-            "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
-            "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
-            "Total rows": len(dataset.data),
-            "Test date": time.strftime("%Y-%m-%d %H:%M:%S"),
-        }
-
-        # Add system info if available
-        dataset_info.update(
-            {
-                "OS": platform.system() + " " + platform.release(),
-                "Python Version": platform.python_version(),
-                "CPU": platform.processor(),
-                "CPU Cores": psutil.cpu_count(logical=False),
-                "CPU Threads": psutil.cpu_count(logical=True),
-                "Total RAM (GB)": round(psutil.virtual_memory().total / (1024**3), 2),
-            },
-        )
-
-        # Write dataset info
-        for key, value in dataset_info.items():
-            sheet[f"A{row}"] = key
-            sheet[f"B{row}"] = str(value)
-            sheet[f"A{row}"].font = Font(italic=True)
+        for key, value in system_info.items():
+            sheet[f"B{row}"] = key
+            sheet[f"C{row}"] = str(value)
+            sheet[f"B{row}"].font = Font(italic=True)
             row += 1
 
         # Add empty row
         row += 1
 
-        # Add results header
+        # Add dataset info header
+        sheet[f"B{row}"] = "Dataset Information"
+        sheet[f"B{row}"].font = Font(bold=True)
+        sheet.merge_cells(f"B{row}:{last_col}{row}")
+        sheet[f"B{row}"].alignment = Alignment(horizontal="center")
+        row += 1
+
+        # Get dataset names in the original order
+        dataset_names = [name for _, name in datasets]
+
+        # Add dataset info columns
+        for i, dataset_name in enumerate(dataset_names):
+            col = get_column_letter(i + 3)
+            sheet[f"{col}{row}"] = dataset_name
+            sheet[f"{col}{row}"].font = Font(bold=True)
+            sheet[f"{col}{row}"].alignment = Alignment(horizontal="center")
+        row += 1
+
+        # Add dataset details
+        dataset_metrics = ["Number of unique IDs", "Timestamps per ID", "Total rows"]
+
+        # Add max dynamic_len metric if it exists for any dataset
+        if any("Max dynamic_len" in dataset_additional_info.get(name, {}) for _, name in datasets):
+            dataset_metrics.append("Max dynamic_len")
+
+        for metric in dataset_metrics:
+            sheet[f"B{row}"] = metric
+
+            for i, dataset_name in enumerate(dataset_names):
+                col = get_column_letter(i + 3)
+
+                if metric in ["Number of unique IDs", "Timestamps per ID", "Total rows"]:
+                    # Find first result for this dataset
+                    dataset_result = next((r for r in all_results if r["dataset_name"] == dataset_name), None)
+                    if dataset_result and metric in dataset_result["dataset_info"]:
+                        sheet[f"{col}{row}"] = dataset_result["dataset_info"][metric]
+                        # Center align the values
+                        sheet[f"{col}{row}"].alignment = Alignment(horizontal="center")
+                elif (
+                    metric == "Max dynamic_len"
+                    and dataset_name in dataset_additional_info
+                    and "Max dynamic_len" in dataset_additional_info[dataset_name]
+                ):
+                    sheet[f"{col}{row}"] = dataset_additional_info[dataset_name]["Max dynamic_len"]
+                    sheet[f"{col}{row}"].alignment = Alignment(horizontal="center")
+            row += 1
+
+        # Add empty row
+        row += 1
+
+        # Add performance results header
         sheet[f"A{row}"] = "Performance Results"
         sheet[f"A{row}"].font = Font(bold=True)
-        sheet.merge_cells(f"A{row}:C{row}")
-        row += 2
 
-        # Prepare data for Excel - create a more readable format
-        for window_type in window_types:
-            window_str = str(window_type)
-            window_results = [r for r in results if r["window_type"] == window_str]
+        last_perf_col = get_column_letter(len(dataset_names) + 2)
+        sheet.merge_cells(f"A{row}:{last_perf_col}{row}")
+        sheet[f"A{row}"].alignment = Alignment(horizontal="center")
+        row += 1
 
-            if window_results:
-                # Add window type as a header row
-                sheet[f"A{row}"] = window_str
-                sheet[f"A{row}"].font = Font(bold=True)
-                sheet.merge_cells(f"A{row}:C{row}")
-                row += 1
+        # Add column headers for performance results
+        sheet[f"A{row}"] = "Window"
+        sheet[f"B{row}"] = "Implementation"
+        sheet[f"A{row}"].font = Font(bold=True)
+        sheet[f"B{row}"].font = Font(bold=True)
 
-                # Add column headers
-                sheet[f"B{row}"] = "Implementation"
-                sheet[f"C{row}"] = "Time (s)"
-                sheet[f"B{row}"].font = Font(bold=True)
-                sheet[f"C{row}"].font = Font(bold=True)
-                row += 1
+        for i in range(len(dataset_names)):
+            col = get_column_letter(i + 3)
+            sheet[f"{col}{row}"] = "Time (s)"
+            sheet[f"{col}{row}"].font = Font(bold=True)
+            sheet[f"{col}{row}"].alignment = Alignment(horizontal="center")
+        row += 1
 
-                # Add results for each implementation
-                for _, name in implementations:  # Use _ for unused impl_class variable
-                    # Find result for this implementation
-                    impl_result = next((r for r in window_results if r["transformer"] == name), None)
+        # Add empty row
+        row += 1
 
-                    if impl_result:
-                        time_value = impl_result.get(f"{name}_time", "N/A")
-                        time_str = f"{time_value:.6f}" if isinstance(time_value, (int, float)) else str(time_value)
+        # Group results by window type
+        window_types_in_results = sorted({r["window_type"] for r in all_results})
 
-                        sheet[f"B{row}"] = f"{name} ({impl_result['implementation_class']})"
-                        sheet[f"C{row}"] = time_str
+        for window_type in window_types_in_results:
+            # Add window type as header
+            sheet[f"A{row}"] = window_type
+            sheet[f"A{row}"].font = Font(bold=True)
 
-                        # Highlight implementation classes
-                        if (
-                            "WithOptimization" in impl_result["implementation_class"]
-                            or "Optimized" in impl_result["implementation_class"]
-                        ):
-                            sheet[f"B{row}"].font = Font(color="006100")  # Dark green
-                        elif (
-                            "WithoutOptimization" in impl_result["implementation_class"]
-                            or "Standard" in impl_result["implementation_class"]
-                        ):
-                            sheet[f"B{row}"].font = Font(color="9C0006")  # Dark red
+            # Get all implementations for this window type
+            implementations_for_window = sorted(
+                {r["implementation"] for r in all_results if r["window_type"] == window_type},
+            )
 
-                        row += 1
+            # Add results for each implementation
+            for i, implementation in enumerate(implementations_for_window):
+                if i > 0:  # Only set implementation name for first row
+                    row += 1
+                    sheet[f"A{row}"] = ""  # Empty cell for window type
 
-                # Add empty row between window types
-                row += 1
+                sheet[f"B{row}"] = implementation
+
+                # Add execution times for each dataset
+                for j, dataset_name in enumerate(dataset_names):
+                    # Find result for this implementation, window type, and dataset
+                    result = next(
+                        (
+                            r
+                            for r in all_results
+                            if r["window_type"] == window_type
+                            and r["implementation"] == implementation
+                            and r["dataset_name"] == dataset_name
+                        ),
+                        None,
+                    )
+
+                    if result:
+                        col = get_column_letter(j + 3)
+                        time_value = result["execution_time"]
+                        if isinstance(time_value, (int, float)):
+                            sheet[f"{col}{row}"] = f"{time_value:.6f}"
+                        else:
+                            sheet[f"{col}{row}"] = str(time_value)
+                        # Center align the values
+                        sheet[f"{col}{row}"].alignment = Alignment(horizontal="center")
+
+            # Add two empty rows between window types
+            row += 3
 
         # Auto-adjust column widths
         for column in sheet.columns:
@@ -270,6 +319,6 @@ def compare_performance(
 
         # Save workbook
         wb.save(output_file)
-        print(f"Results for {dataset_name} dataset saved to Excel file: {output_file}")
+        print(f"Results for {sheet_name} saved to Excel file: {output_file}")
 
-    return results_df
+    return pd.DataFrame(all_results)
