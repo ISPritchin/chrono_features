@@ -40,7 +40,18 @@ def test_rolling_window_optimization_comparison(medium_dataset: TSDataset) -> No
     compare_multiple_implementations(
         medium_dataset,
         implementations,
-        WindowType.ROLLING(size=5),
+        WindowType.ROLLING(size=5, only_full_window=False),
+    )
+
+    implementations = [
+        (MaxWithOptimization, "optimized"),
+        (MaxWithoutOptimization, "non_optimized"),
+    ]
+
+    compare_multiple_implementations(
+        medium_dataset,
+        implementations,
+        WindowType.ROLLING(size=5, only_full_window=True),
     )
 
 

@@ -2,7 +2,10 @@ import numpy as np
 import pytest
 
 from chrono_features import TSDataset, WindowType
-from chrono_features.features.min import MinWithOptimization, MinWithoutOptimization
+from chrono_features.features.absolute_sum_of_changes import (
+    AbsoluteSumOfChangesWithOptimization,
+    AbsoluteSumOfChangesWithoutOptimization,
+)
 from tests.utils.compare_multiple_implementations import compare_multiple_implementations
 from tests.utils.performance import create_dataset
 
@@ -17,10 +20,10 @@ def medium_dataset() -> TSDataset:
 
 
 def test_expanding_window_optimization_comparison(medium_dataset: TSDataset) -> None:
-    """Test that different implementations of expanding window min produce identical results."""
+    """Test that different implementations of expanding window absolute_sum_of_changes produce identical results."""
     implementations = [
-        (MinWithOptimization, "optimized"),
-        (MinWithoutOptimization, "non_optimized"),
+        (AbsoluteSumOfChangesWithOptimization, "optimized"),
+        (AbsoluteSumOfChangesWithoutOptimization, "non_optimized"),
     ]
 
     compare_multiple_implementations(
@@ -31,10 +34,10 @@ def test_expanding_window_optimization_comparison(medium_dataset: TSDataset) -> 
 
 
 def test_rolling_window_optimization_comparison(medium_dataset: TSDataset) -> None:
-    """Test that different implementations of rolling window min produce identical results."""
+    """Test that different implementations of rolling window absolute_sum_of_changes produce identical results."""
     implementations = [
-        (MinWithOptimization, "optimized"),
-        (MinWithoutOptimization, "non_optimized"),
+        (AbsoluteSumOfChangesWithOptimization, "optimized"),
+        (AbsoluteSumOfChangesWithoutOptimization, "non_optimized"),
     ]
 
     compare_multiple_implementations(
@@ -44,8 +47,8 @@ def test_rolling_window_optimization_comparison(medium_dataset: TSDataset) -> No
     )
 
     implementations = [
-        (MinWithOptimization, "optimized"),
-        (MinWithoutOptimization, "non_optimized"),
+        (AbsoluteSumOfChangesWithOptimization, "optimized"),
+        (AbsoluteSumOfChangesWithoutOptimization, "non_optimized"),
     ]
 
     compare_multiple_implementations(
@@ -56,14 +59,14 @@ def test_rolling_window_optimization_comparison(medium_dataset: TSDataset) -> No
 
 
 def test_dynamic_window_optimization_comparison(medium_dataset: TSDataset) -> None:
-    """Test that different implementations of dynamic window min produce identical results."""
+    """Test that different implementations of dynamic window absolute_sum_of_changes produce identical results."""
     # Add a dynamic window length column with values between 1 and 5
     window_lengths = np.random.randint(1, 6, size=len(medium_dataset.data))
     medium_dataset.add_feature("window_len", window_lengths)
 
     implementations = [
-        (MinWithOptimization, "optimized"),
-        (MinWithoutOptimization, "non_optimized"),
+        (AbsoluteSumOfChangesWithOptimization, "optimized"),
+        (AbsoluteSumOfChangesWithoutOptimization, "non_optimized"),
     ]
 
     compare_multiple_implementations(

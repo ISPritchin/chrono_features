@@ -403,6 +403,28 @@ For calculating sums over windows, the library uses a prefix sum (cumulative sum
 
 This optimization is particularly effective for large windows or when many window calculations are needed.
 
+### Prefix Sum Optimization for `Absolute Sum of Changes`
+
+The Absolute Sum of Changes feature calculates the sum of absolute differences between consecutive values within a specified window. This feature is useful for measuring volatility or the total amount of change in a time series segment.
+
+#### Optimization Strategy
+
+The optimized implementation uses prefix sum arrays to efficiently calculate the absolute sum of changes for different window types:
+
+1. **Expanding Windows**: Uses a cumulative approach that tracks changes incrementally, avoiding redundant calculations.
+
+2. **Rolling Windows**: Utilizes a sliding window approach with prefix sums of absolute differences to achieve O(1) lookups for each window.
+
+3. **Dynamic Windows**: Employs prefix sum arrays to handle variable-sized windows efficiently.
+
+#### Performance Benefits
+
+- **Reduced Computational Complexity**: From O(n²) to O(n) for large windows
+- **Memory Efficiency**: Reuses calculations across overlapping windows
+- **Scalability**: Handles large datasets with minimal performance degradation
+
+For smaller windows, the standard implementation is used as it has less overhead for small window sizes.
+
 ## License
 This project is licensed under the terms of the LICENSE file (MIT License) included in the repository.
 
