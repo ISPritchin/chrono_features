@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from chrono_features.features.mean import SimpleMovingAverage
+from chrono_features.features.simple_moving_average import SimpleMovingAverage
 from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase
 

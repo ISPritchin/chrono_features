@@ -5,7 +5,7 @@ import pytest
 
 from chrono_features import WindowType
 from chrono_features.features import Max, Median, Sum, WeightedMovingAverage
-from chrono_features.features.mean import WeightedMean
+from chrono_features.features.weighted_mean import WeightedMean
 from chrono_features.transformation_pipeline import TransformationPipeline
 from chrono_features.ts_dataset import TSDataset
 
