@@ -11,6 +11,7 @@ from chrono_features.features.absolute_sum_of_changes import (
     AbsoluteSumOfChangesWithoutOptimization,
 )
 from chrono_features.features.max import MaxWithOptimization, MaxWithoutOptimization
+from chrono_features.features.mean import MeanWithPrefixSumOptimization, MeanWithoutOptimization
 from chrono_features.features.min import MinWithOptimization, MinWithoutOptimization
 from chrono_features.features.sum import SumWithPrefixSumOptimization, SumWithoutOptimization
 from tests.utils.compare_multiple_implementations import compare_multiple_implementations
@@ -87,6 +88,7 @@ def run_optimization_comparison_tests(
     [
         (AbsoluteSumOfChangesWithOptimization, AbsoluteSumOfChangesWithoutOptimization, "AbsoluteSumOfChanges"),
         (MaxWithOptimization, MaxWithoutOptimization, "Max"),
+        (MeanWithPrefixSumOptimization, MeanWithoutOptimization, "Mean"),
         (MinWithOptimization, MinWithoutOptimization, "Min"),
         (SumWithPrefixSumOptimization, SumWithoutOptimization, "Sum"),
     ],

@@ -4,7 +4,6 @@ import pytest
 
 from chrono_features.features.simple_moving_average import SimpleMovingAverage
 from chrono_features.ts_dataset import TSDataset
-from chrono_features.window_type import WindowBase
 
 
 @pytest.fixture
@@ -19,28 +18,6 @@ def sample_dataset():
         },
     )
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
-
-
-def test_simple_moving_average_basic():
-    """Test basic instantiation of SimpleMovingAverage."""
-    sma = SimpleMovingAverage(columns="value", window_size=3)
-
-    # Check that it returns a Mean instance
-    assert sma.__class__.__name__ == "Mean"
-
-    # Check that window type is correctly set
-    assert isinstance(sma.window_types[0], WindowBase)
-    assert sma.window_types[0].suffix == "rolling_3"
-    assert sma.window_types[0].size == 3
-    assert not sma.window_types[0].only_full_window
-
-
-def test_simple_moving_average_with_full_window():
-    """Test SimpleMovingAverage with only_full_window=True."""
-    sma = SimpleMovingAverage(columns="value", window_size=3, only_full_window=True)
-
-    # Check that window type is correctly set with only_full_window=True
-    assert sma.window_types[0].only_full_window
 
 
 def test_simple_moving_average_with_custom_output_name():
@@ -96,7 +73,7 @@ def test_simple_moving_average_calculation(sample_dataset):
     expected_values = [np.nan, np.nan, 20.0, 30.0, 40.0, np.nan, np.nan, 15.0, 25.0, 35.0]  # For id=1  # For id=2
 
     # Check results
-    result_values = result.data["value_simple_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_simple_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -115,7 +92,7 @@ def test_simple_moving_average_with_full_window_calculation(sample_dataset):
     expected_values = [np.nan, np.nan, 20.0, 30.0, 40.0, np.nan, np.nan, 15.0, 25.0, 35.0]  # For id=1  # For id=2
 
     # Check results
-    result_values = result.data["value_simple_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_simple_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -131,7 +108,7 @@ def test_simple_moving_average_window_size_one(sample_dataset):
     expected_values = [10, 20, 30, 40, 50, 5, 15, 25, 35, 45]
 
     # Check results
-    result_values = result.data["value_simple_moving_average_rolling_1"].to_numpy()
+    result_values = result.data["value_simple_moving_average_1"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values)
 
 
@@ -147,7 +124,7 @@ def test_simple_moving_average_window_size_larger_than_data(sample_dataset):
     expected_values = np.full(10, np.nan)
 
     # Check results
-    result_values = result.data["value_simple_moving_average_rolling_10"].to_numpy()
+    result_values = result.data["value_simple_moving_average_10"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -174,7 +151,7 @@ def test_simple_moving_average_with_missing_values():
     expected_values = [10.0, np.nan, np.nan, np.nan, 40.0]
 
     # Check results
-    result_values = result.data["value_simple_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_simple_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True)
 
 
@@ -197,8 +174,8 @@ def test_simple_moving_average_with_multiple_columns_calculation(sample_dataset)
     expected_other_value_sma = [np.nan, 1.5, 2.5, 3.5, 4.5, np.nan, 6.5, 7.5, 8.5, 9.5]  # For id=1  # For id=2
 
     # Check results
-    value_sma = result.data["value_simple_moving_average_rolling_2"].to_numpy()
-    other_value_sma = result.data["other_value_simple_moving_average_rolling_2"].to_numpy()
+    value_sma = result.data["value_simple_moving_average_2"].to_numpy()
+    other_value_sma = result.data["other_value_simple_moving_average_2"].to_numpy()
 
     np.testing.assert_allclose(value_sma, expected_value_sma, equal_nan=True)
     np.testing.assert_allclose(other_value_sma, expected_other_value_sma, equal_nan=True)

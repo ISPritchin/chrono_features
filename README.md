@@ -399,18 +399,20 @@ For rolling window calculations like `Max` and `Min`, a sliding window approach 
 
 This optimization significantly reduces computation time for large rolling windows, especially when the maximum/minimum values don't change frequently.
 
-### Prefix Sum Optimization for `Sum`
+### Prefix Sum Optimization for `Sum` and `Mean`
 
-For calculating sums over windows, the library uses a prefix sum (cumulative sum) optimization to avoid redundant addition operations:
+For calculating sums and means over windows, the library uses a prefix sum (cumulative sum) optimization to avoid redundant operations:
 
 1. **How Prefix Sums Work**: 
    - A prefix sum array stores cumulative sums of the original array
    - To find the sum of any window, subtract the prefix sum at the start of the window from the prefix sum at the end
+   - For mean, divide this sum by the window size
 
 2. **Example**:
    - Original array: `[3, 1, 4, 1, 5, 9]`
    - Prefix sum array: `[0, 3, 4, 8, 9, 14, 23]` (starting with 0)
    - To find sum of elements from index 2 to 4: `prefix_sum[5] - prefix_sum[2] = 14 - 4 = 10`
+   - To find mean of elements from index 2 to 4: `(prefix_sum[5] - prefix_sum[2]) / 3 = 10 / 3 = 3.33`
 
 3. **Performance Improvement**:
    - Standard approach: O(n) operations per window (where n is window size)
@@ -418,7 +420,8 @@ For calculating sums over windows, the library uses a prefix sum (cumulative sum
    - For a dataset with m windows, complexity improves from O(m×n) to O(m+n)
 
 4. **When It's Used**:
-   - Used  when `use_prefix_sum_optimization=True` and (`window size > 50` for rolling windows or for dynamic windows with any sizes)
+   - For `Sum`: Used when `use_prefix_sum_optimization=True` and (`window size > 50` for rolling windows or for dynamic windows with any sizes)
+   - For `Mean`: Used for expanding windows by default, and for rolling/dynamic windows when `use_prefix_sum_optimization=True` or window size is large
 
 This optimization is particularly effective for large windows or when many window calculations are needed.
 

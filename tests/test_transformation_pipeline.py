@@ -5,7 +5,6 @@ import pytest
 
 from chrono_features import WindowType
 from chrono_features.features import Max, Median, Sum, WeightedMovingAverage
-from chrono_features.features.weighted_mean import WeightedMean
 from chrono_features.transformation_pipeline import TransformationPipeline
 from chrono_features.ts_dataset import TSDataset
 
@@ -67,10 +66,10 @@ def test_weighted_moving_average(sample_dataset):
 
     result = pipeline.fit_transform(sample_dataset)
 
-    assert "value_weighted_moving_average_rolling_3" in result.data.columns
+    assert "value_weighted_moving_average_3" in result.data.columns
     # Check first valid value (third element)
     expected = (0.1 * 1 + 0.3 * 2 + 0.6 * 3) / (0.1 + 0.3 + 0.6)
-    assert np.isclose(result.data["value_weighted_moving_average_rolling_3"][2], expected)
+    assert np.isclose(result.data["value_weighted_moving_average_3"][2], expected)
 
 
 def test_multiple_different_transformations(sample_dataset):
@@ -84,11 +83,11 @@ def test_multiple_different_transformations(sample_dataset):
 
     result = pipeline.fit_transform(sample_dataset)
 
-    expected_columns = {"value_median_rolling_2", "value_sum_expanding", "value_weighted_moving_average_rolling_3"}
+    expected_columns = {"value_median_rolling_2", "value_sum_expanding", "value_weighted_moving_average_3"}
     assert expected_columns.issubset(set(result.data.columns))
 
     # Check transformation order
-    assert pipeline.get_transformation_names() == ["Median", "Sum", "WeightedMean"]
+    assert pipeline.get_transformation_names() == ["Median", "Sum", "WeightedMovingAverage"]
 
 
 @pytest.fixture
@@ -161,7 +160,7 @@ def test_multi_column_dataset(multi_column_dataset):
     # Check new columns added
     assert "price_median_rolling_2" in result.data.columns
     assert "volume_sum_expanding" in result.data.columns
-    assert "price_weighted_moving_average_rolling_2" in result.data.columns
+    assert "price_weighted_moving_average_2" in result.data.columns
 
     # Verify no unexpected columns
     assert len(result.data.columns) == 7  # 4 original + 3 new
@@ -252,7 +251,7 @@ def test_pipeline_addition_operator():
 
     assert len(combined_with_single.transformations) == 2
     assert isinstance(combined_with_single.transformations[0], Median)
-    assert isinstance(combined_with_single.transformations[1], WeightedMean)
+    assert isinstance(combined_with_single.transformations[1], WeightedMovingAverage)
 
 
 def test_multiple_pipeline_chaining(multi_column_dataset):
@@ -358,7 +357,7 @@ def test_get_transformation_names():
     names = pipeline.get_transformation_names()
 
     # Assert
-    assert names == ["Median", "Sum", "WeightedMean"]
+    assert names == ["Median", "Sum", "WeightedMovingAverage"]
     assert len(names) == 3
 
 
@@ -437,7 +436,7 @@ def test_complex_integration(multi_column_dataset):
         "volume_sum_expanding",
         "volume_sum_rolling_2",
         "price_median_rolling_3",
-        "volume_weighted_moving_average_rolling_2",
+        "volume_weighted_moving_average_2",
     }
     assert expected_columns.issubset(set(result.data.columns))
 

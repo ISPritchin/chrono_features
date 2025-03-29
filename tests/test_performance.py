@@ -9,6 +9,7 @@ from chrono_features.features.absolute_sum_of_changes import (
     AbsoluteSumOfChanges,
 )
 from chrono_features.features.max import MaxWithOptimization, MaxWithoutOptimization, Max
+from chrono_features.features.mean import MeanWithPrefixSumOptimization, MeanWithoutOptimization, Mean
 from chrono_features.features.min import MinWithOptimization, MinWithoutOptimization, Min
 from chrono_features.features.sum import SumWithPrefixSumOptimization, SumWithoutOptimization, Sum
 from tests.utils.performance import create_dataset_with_dynamic_windows, compare_performance
@@ -79,6 +80,24 @@ def test_min_performance() -> None:
         (MinWithOptimization, "optimized"),
         (MinWithoutOptimization, "non_optimized"),
         (Min, "strategy_selector"),
+    ]
+
+    # Run performance comparison
+    compare_performance(
+        datasets=DATASETS,
+        implementations=implementations,
+        window_types=WINDOW_TYPES,
+        output_file=OUTPUT_FILE,
+    )
+
+
+@pytest.mark.performance
+def test_mean_performance() -> None:
+    """Compare performance of Mean implementations across various window types."""
+    implementations = [
+        (MeanWithPrefixSumOptimization, "optimized"),
+        (MeanWithoutOptimization, "non_optimized"),
+        (Mean, "strategy_selector"),
     ]
 
     # Run performance comparison

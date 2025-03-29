@@ -132,11 +132,10 @@ class AbstractGenerator(ABC):
         raise NotImplementedError
 
 
-class FeatureGenerator(AbstractGenerator):
+class BaseFeatureGenerator(AbstractGenerator):
     def __init__(
         self,
         columns: list[str] | str,
-        window_types: WindowType,
         out_column_names: str | list[str] | None = None,
     ) -> None:
         if isinstance(columns, str):
@@ -144,19 +143,41 @@ class FeatureGenerator(AbstractGenerator):
         if not isinstance(columns, list) or not len(columns):
             raise ValueError
 
+        if isinstance(out_column_names, str):
+            out_column_names = [out_column_names]
+
+        self.columns = columns
+        self.out_column_names = out_column_names
+
+
+class FeatureGenerator(BaseFeatureGenerator):
+    """Base class for feature generators.
+
+    Provides a framework for implementing feature generators that can dynamically
+    select between different implementation strategies based on window type and other parameters.
+    """
+
+    def __init__(
+        self,
+        columns: list[str] | str,
+        window_types: list[WindowType] | WindowType,
+        out_column_names: str | list[str] | None = None,
+    ) -> None:
+        super().__init__(
+            columns=columns,
+            out_column_names=out_column_names,
+        )
         if isinstance(window_types, WindowBase):
             window_types = [window_types]
+        self.window_types = window_types
+
         if not isinstance(window_types, list) or not len(window_types):
             raise ValueError
 
-        if isinstance(out_column_names, str):
-            out_column_names = [out_column_names]
-        if out_column_names is not None and len(columns) * len(window_types) != len(out_column_names):
+        if self.out_column_names is not None and len(self.columns) * len(self.window_types) != len(
+            self.out_column_names,
+        ):
             raise ValueError
-
-        self.columns = columns
-        self.window_types = window_types
-        self.out_column_names = out_column_names
 
     def transform(self, dataset: TSDataset) -> np.ndarray:
         if not self.columns:

@@ -6,7 +6,7 @@ from typing import Union
 import polars as pl
 import pandas as pd
 
-from chrono_features.features._base import AbstractGenerator, FeatureGenerator
+from chrono_features.features._base import AbstractGenerator
 from chrono_features.ts_dataset import TSDataset
 
 
@@ -200,24 +200,40 @@ class TransformationPipeline:
         # Convert back to pandas and return
         return result_pl.to_pandas()
 
-    def __add__(self, other: Union["TransformationPipeline", FeatureGenerator]) -> "TransformationPipeline":
-        """Combines pipelines or adds a transformation using + operator.
+    def __add__(
+        self,
+        other: Union["TransformationPipeline", AbstractGenerator],
+    ) -> "TransformationPipeline":
+        """Add another transformation or pipeline to this pipeline.
 
         Args:
-            other: Another pipeline or single transformation to add.
+            other: Another TransformationPipeline or a single transformation.
 
         Returns:
-            New combined TransformationPipeline instance.
+            TransformationPipeline: A new pipeline with combined transformations.
 
         Raises:
-            TypeError: If other is not a pipeline or transformation.
+            TypeError: If other is not a TransformationPipeline or a transformation.
         """
-        if isinstance(other, FeatureGenerator):
-            return TransformationPipeline([*self.transformations, deepcopy(other)])
+        from chrono_features.features._base import AbstractGenerator
+
+        # Create a new pipeline with a deep copy of current transformations
+        result = TransformationPipeline(
+            transformations=deepcopy(self.transformations),
+            verbose=self.verbose,
+        )
+
+        # If other is a pipeline, add its transformations
         if isinstance(other, TransformationPipeline):
-            return TransformationPipeline(deepcopy(self.transformations) + deepcopy(other.transformations))
-        msg = f"Cannot add {type(other)} to TransformationPipeline"
-        raise TypeError(msg)
+            result.transformations.extend(deepcopy(other.transformations))
+        # If other is a transformation (AbstractGenerator), add it directly
+        elif isinstance(other, AbstractGenerator):
+            result.transformations.append(deepcopy(other))
+        else:
+            msg = f"Cannot add {type(other)} to TransformationPipeline"
+            raise TypeError(msg)
+
+        return result
 
     def get_transformation_names(self) -> list[str]:
         """Returns names of all transformations in the pipeline.

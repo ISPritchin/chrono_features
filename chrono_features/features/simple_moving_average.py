@@ -1,44 +1,57 @@
+from chrono_features.features._base import BaseFeatureGenerator
+from chrono_features import TSDataset
 from chrono_features.features.mean import Mean
 from chrono_features.window_type import WindowType
 
 
-class SimpleMovingAverage:
-    """Factory class for creating simple moving average feature generators.
+class SimpleMovingAverage(BaseFeatureGenerator):
+    """Simple moving average feature generator for time series data.
 
-    Creates a Mean feature generator with a rolling window of specified size.
+    Calculates the simple moving average of values within a rolling window.
     """
 
-    def __new__(
-        cls,
+    def __init__(
+        self,
         *,
-        columns: str | list[str],
+        columns: list[str] | str,
         window_size: int,
-        out_column_names: str | list[str] | None = None,
         only_full_window: bool = False,
-    ) -> Mean:
-        """Create a simple moving average feature generator.
+        out_column_names: list[str] | str | None = None,
+    ) -> None:
+        """Initialize the simple moving average feature generator.
 
         Args:
-            columns: Columns to calculate moving average for.
+            columns: Columns to calculate simple moving average for.
             window_size: Size of the rolling window.
-            out_column_names: Names for output columns.
             only_full_window: Whether to calculate only for full windows.
+            out_column_names: Names for output columns.
+        """
+        super().__init__(columns=columns, out_column_names=out_column_names)
+        self.window_size = window_size
+        self.only_full_window = only_full_window
+
+        # Если имена выходных колонок не указаны, создаем их в формате "column_sma_window_size"
+        if out_column_names is None:
+            if isinstance(columns, str):
+                sma_out_column_names = f"{columns}_simple_moving_average_{window_size}"
+            else:
+                sma_out_column_names = [f"{col}_simple_moving_average_{window_size}" for col in columns]
+        else:
+            sma_out_column_names = out_column_names
+
+        self.mean_transformer = Mean(
+            columns=columns,
+            window_types=WindowType.ROLLING(size=window_size, only_full_window=only_full_window),
+            out_column_names=sma_out_column_names,
+        )
+
+    def transform(self, dataset: TSDataset) -> TSDataset:
+        """Apply the simple moving average transformation to the dataset.
+
+        Args:
+            dataset: Dataset to transform.
 
         Returns:
-            Mean: A Mean feature generator configured for simple moving average.
-
-        Raises:
-            ValueError: If window_size is less than or equal to 0.
+            TSDataset: Transformed dataset.
         """
-        if window_size <= 0:
-            raise ValueError
-
-        return Mean(
-            columns=columns,
-            window_types=WindowType.ROLLING(
-                size=window_size,
-                only_full_window=only_full_window,
-            ),
-            out_column_names=out_column_names,
-            func_name="simple_moving_average",
-        )
+        return self.mean_transformer.transform(dataset)

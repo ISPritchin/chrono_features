@@ -35,7 +35,7 @@ def test_weighted_moving_average_basic(sample_dataset):
         (20 * 1 + 30 * 2 + 40 * 3) / 6,  # window [20, 30, 40]
     ]
 
-    result_values = result.data["value_weighted_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_weighted_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True, rtol=1e-5)
 
 
@@ -56,7 +56,7 @@ def test_weighted_moving_average_only_full_window(sample_dataset):
         (20 * 1 + 30 * 2 + 40 * 3) / 6,
     ]
 
-    result_values = result.data["value_weighted_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_weighted_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True, rtol=1e-5)
 
 
@@ -77,7 +77,7 @@ def test_weighted_moving_average_custom_weights(sample_dataset):
         (20 * 0.1 + 30 * 0.3 + 40 * 0.6) / 1.0,
     ]
 
-    result_values = result.data["value_weighted_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_weighted_moving_average_3"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True, rtol=1e-5)
 
 
@@ -106,7 +106,7 @@ def test_weighted_moving_average_falls_back_to_simple(sample_dataset):
     expected = sma.transform(sample_dataset)
 
     # Should produce same results as simple moving average
-    result_values = result.data["value_weighted_moving_average_rolling_3"].to_numpy()
-    expected_values = expected.data["value_simple_moving_average_rolling_3"].to_numpy()
+    result_values = result.data["value_weighted_moving_average_3"].to_numpy()
+    expected_values = expected.data["value_simple_moving_average_3"].to_numpy()
 
     np.testing.assert_array_equal(result_values, expected_values)
