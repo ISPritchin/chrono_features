@@ -285,7 +285,7 @@ print(transformed_dataset.data)
 ```
 
 ```output
-Applying transformation 1/4: MaxWithOptimization...
+Applying transformation 1/4: Max...
   Added columns: ['price_max_expanding']
   Dataset shape: 6 rows,                         5 columns
 Applying transformation 2/4: Sum...
@@ -302,7 +302,7 @@ shape: (6, 8)
 │ id  ┆ timestamp ┆ price ┆ volume ┆ price_max_expanding ┆ volume_sum_expanding ┆ price_median_rolling_2 ┆ volume_std_rolling_2 │
 │ --- ┆ ---       ┆ ---   ┆ ---    ┆ ---                 ┆ ---                  ┆ ---                    ┆ ---                  │
 │ i64 ┆ i64       ┆ i64   ┆ i64    ┆ f64                 ┆ f64                  ┆ f32                    ┆ f32                  │
-╞═════╪═══════════╪═══════╪════════╪═════════════════════╪══════════════════════╪══════════════════════╡
+╞═════╪═══════════╪═══════╪════════╪═════════════════════╪══════════════════════╪════════════════════════╪══════════════════════╡
 │ 1   ┆ 1         ┆ 10    ┆ 100    ┆ 10.0                ┆ 100.0                ┆ NaN                    ┆ NaN                  │
 │ 1   ┆ 2         ┆ 12    ┆ 120    ┆ 12.0                ┆ 220.0                ┆ 11.0                   ┆ 10.0                 │
 │ 1   ┆ 3         ┆ 15    ┆ 150    ┆ 15.0                ┆ 370.0                ┆ 13.5                   ┆ 15.0                 │
@@ -349,8 +349,8 @@ shape: (6, 5)
 ┌─────┬───────────┬───────┬────────────┬─────────────────────────────────┐
 │ id  ┆ timestamp ┆ value ┆ window_len ┆ value_max_dynamic_based_on_win… │
 │ --- ┆ ---       ┆ ---   ┆ ---        ┆ ---                             │
-│ i64 ┆ i64       ┆ i64   ┆ i64        ┆ f32                             │
-╞═════╪═══════════╪═══════╪════════════╪══════════════════════════════╡
+│ i64 ┆ i64       ┆ i64   ┆ i64        ┆ f64                             │
+╞═════╪═══════════╪═══════╪════════════╪═════════════════════════════════╡
 │ 1   ┆ 1         ┆ 1     ┆ 1          ┆ 1.0                             │
 │ 1   ┆ 2         ┆ 2     ┆ 2          ┆ 2.0                             │
 │ 1   ┆ 3         ┆ 3     ┆ 3          ┆ 3.0                             │
@@ -366,13 +366,15 @@ The following table lists all available transformers in the `chrono_features.fea
 
 | Transformer | Description | Parameters |
 | ----------- | ----------- | ---------- |
+| `AbsoluteSumOfChanges` | Calculates sum of absolute differences between consecutive values | `columns`, `window_types` |
 | `Max` | Calculates maximum value in window | `columns`, `window_types` |
-| `Min` | Calculates the minimum value in window| `columns`, `window_types`|
-| `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
 | `Mean` | Calculates average of values in window | `columns`, `window_types` |
-| `Std` | Calculates standard deviation in window | `columns`, `window_types` |
 | `Median` | Calculates median value in window | `columns`, `window_types` |
+| `Min` | Calculates the minimum value in window | `columns`, `window_types` |
 | `SimpleMovingAverage` | Calculates simple moving average | `columns`, `window_size`, `only_full_window` |
+| `Std` | Calculates standard deviation in window | `columns`, `window_types` |
+| `Sum` | Calculates sum of values in window | `columns`, `window_types`, `use_prefix_sum_optimization` |
+| `WeightedMean` | Calculates weighted average of values in window | `columns`, `window_types`, `weights` |
 | `WeightedMovingAverage` | Calculates weighted moving average | `columns`, `window_size`, `weights`, `only_full_window` |
 
 ## Optimization
