@@ -49,7 +49,7 @@ def test_sum_rolling_only_full_window_with_optimization(sample_dataset: TSDatase
     sum_transformer = Sum(
         use_prefix_sum_optimization=True,
         columns="value",
-        window_types=WindowType.ROLLING(size=2),
+        window_types=WindowType.ROLLING(size=2, only_full_window=True),
     )
     transformed_dataset = sum_transformer.transform(sample_dataset)
 
@@ -123,7 +123,7 @@ def test_sum_multiple_window_types(sample_dataset: TSDataset, *, use_prefix_sum_
     sum_transformer = Sum(
         use_prefix_sum_optimization=use_prefix_sum_optimization,
         columns="value",
-        window_types=[WindowType.EXPANDING(), WindowType.ROLLING(size=2)],
+        window_types=[WindowType.EXPANDING(), WindowType.ROLLING(size=2, only_full_window=True)],
     )
     transformed_dataset = sum_transformer.transform(sample_dataset)
 

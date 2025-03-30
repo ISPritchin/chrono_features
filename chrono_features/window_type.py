@@ -45,6 +45,16 @@ class WindowBase(ABC):
         """
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def _description(self) -> str:
+        """Returns a human-readable description of the window type.
+
+        Returns:
+            str: A string describing the window type in a human-readable format.
+        """
+        raise NotImplementedError
+
 
 class WindowType:
     """Class containing various types of windows."""
@@ -61,6 +71,10 @@ class WindowType:
 
         def __repr__(self) -> str:
             return "WindowType.EXPANDING()"
+
+        @property
+        def _description(self) -> str:
+            return "Expanding window (grows from start of time series)"
 
     class ROLLING(WindowBase):
         """A window with a fixed size."""
@@ -91,6 +105,10 @@ class WindowType:
         def __repr__(self) -> str:
             return f"WindowType.ROLLING(size={self.size}, only_full_window={self.only_full_window})"
 
+        @property
+        def _description(self) -> str:
+            return f"Rolling window (fixed size: {self.size}, only_full: {self.only_full_window})"
+
     class DYNAMIC(WindowBase):
         """A window with a dynamic size based on a column."""
 
@@ -106,3 +124,7 @@ class WindowType:
 
         def __repr__(self) -> str:
             return f"WindowType.DYNAMIC(len_column_name='{self.len_column_name}')"
+
+        @property
+        def _description(self) -> str:
+            return f"Dynamic window (variable size from column: {self.len_column_name})"

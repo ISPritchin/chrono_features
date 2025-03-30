@@ -133,7 +133,7 @@ def compare_performance(
     window_table.add_column("Description", style="yellow")
 
     for window_type in window_types:
-        window_table.add_row(str(window_type), _get_window_description(window_type))
+        window_table.add_row(str(window_type), window_type._description)
 
     console.print(Panel(window_table, title="Window Types to be Tested", border_style="magenta"))
 
@@ -306,8 +306,6 @@ def compare_performance(
         sheet["B1"] = "Stend description"
         sheet["B1"].font = Font(bold=True)
 
-        # Динамически определяем количество столбцов для объединения ячеек
-        # Учитываем количество датасетов + 2 столбца (B и C)
         last_col = get_column_letter(len(datasets) + 2)
         sheet.merge_cells(f"B1:{last_col}1")
         sheet["B1"].alignment = Alignment(horizontal="center")
@@ -464,15 +462,3 @@ def compare_performance(
         print(f"Results for {sheet_name} saved to Excel file: {output_file}")
 
     return pd.DataFrame(all_results)
-
-
-# Helper function to get window type description
-def _get_window_description(window_type: WindowType) -> str:
-    """Get a human-readable description of a window type."""
-    if isinstance(window_type, WindowType.EXPANDING):
-        return "Expanding window (grows from start of time series)"
-    if isinstance(window_type, WindowType.ROLLING):
-        return f"Rolling window (fixed size: {window_type.size}, only_full: {window_type.only_full_window})"
-    if isinstance(window_type, WindowType.DYNAMIC):
-        return f"Dynamic window (variable size from column: {window_type.len_column_name})"
-    return "Unknown window type"

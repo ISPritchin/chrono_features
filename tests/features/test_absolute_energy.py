@@ -41,7 +41,7 @@ def test_absolute_energy_rolling(sample_dataset: TSDataset) -> None:
     """Test rolling window calculation of absolute energy."""
     transformer = AbsoluteEnergy(
         columns="value",
-        window_types=WindowType.ROLLING(size=2),
+        window_types=WindowType.ROLLING(size=2, only_full_window=True),
     )
     transformed_dataset = transformer.transform(sample_dataset)
 

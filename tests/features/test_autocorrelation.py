@@ -59,7 +59,7 @@ def test_autocorrelation_lag2_rolling(sample_dataset: TSDataset) -> None:
     """Tests autocorrelation with lag=2 on a rolling window of size 5."""
     autocorr = Autocorrelation(
         columns="value",
-        window_types=WindowType.ROLLING(size=5),
+        window_types=WindowType.ROLLING(size=5, only_full_window=True),
         lag=2,
         out_column_names="autocorr_lag2_rolling",
     )

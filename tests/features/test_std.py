@@ -36,7 +36,7 @@ def test_std_expanding(sample_dataset):
 
 def test_std_rolling(sample_dataset):
     """Test rolling window standard deviation calculation"""
-    transformer = Std(columns="value", window_types=WindowType.ROLLING(size=2))
+    transformer = Std(columns="value", window_types=WindowType.ROLLING(size=2, only_full_window=True))
     transformed_dataset = transformer.transform(sample_dataset)
 
     # Expected results:
@@ -104,7 +104,7 @@ def test_std_single_value_windows():
     data = pl.DataFrame(data={"id": [1, 1, 2, 2], "timestamp": [1, 2, 1, 2], "value": [1, 2, 3, 4]})
     dataset = TSDataset(data=data, id_column_name="id", ts_column_name="timestamp")
 
-    transformer = Std(columns="value", window_types=WindowType.ROLLING(size=1))
+    transformer = Std(columns="value", window_types=WindowType.ROLLING(size=1, only_full_window=True))
     transformed_dataset = transformer.transform(dataset)
 
     # Standard deviation of single value is NaN

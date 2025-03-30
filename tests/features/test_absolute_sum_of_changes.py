@@ -41,7 +41,7 @@ def test_absolute_sum_of_changes_rolling(sample_dataset: TSDataset) -> None:
     """Test rolling window calculation of absolute sum of changes."""
     transformer = AbsoluteSumOfChanges(
         columns="value",
-        window_types=WindowType.ROLLING(size=2),
+        window_types=WindowType.ROLLING(size=2, only_full_window=True),
     )
     transformed_dataset = transformer.transform(sample_dataset)
 
