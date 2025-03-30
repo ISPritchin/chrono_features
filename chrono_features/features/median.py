@@ -12,7 +12,7 @@ from chrono_features.window_type import WindowBase, WindowType
 
 
 @numba.njit  # pragma: no cover
-def process_expanding_median(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
+def process_expanding(feature: np.ndarray, lens: np.ndarray) -> np.ndarray:
     """Efficiently calculate median for expanding windows.
 
     This implementation maintains a sorted array for each time series and updates it
@@ -52,7 +52,7 @@ def process_expanding_median(feature: np.ndarray, lens: np.ndarray) -> np.ndarra
 
 
 @numba.njit  # pragma: no cover
-def process_rolling_median(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray, window_size: int) -> np.ndarray:
+def process_rolling(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray, window_size: int) -> np.ndarray:
     """Optimized processing for rolling windows median calculation.
 
     This implementation uses a sliding window approach with a sorted buffer,
@@ -133,7 +133,7 @@ def process_rolling_median(feature: np.ndarray, lens: np.ndarray, ts_lens: np.nd
 
 
 @numba.njit  # pragma: no cover
-def process_dynamic_median(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
+def process_dynamic(feature: np.ndarray, lens: np.ndarray, ts_lens: np.ndarray) -> np.ndarray:
     """Optimized processing for dynamic windows median calculation.
 
     This implementation handles variable-sized windows efficiently by
@@ -155,7 +155,6 @@ def process_dynamic_median(feature: np.ndarray, lens: np.ndarray, ts_lens: np.nd
         start = end
         end = start + current_len
 
-        # For each time series
         for j in range(start, end):
             if lens[j] == 0:
                 result[j] = np.nan
@@ -229,15 +228,14 @@ class MedianWithOptimization(_FromNumbaFuncWithoutCalculatedForEachTS):
             ValueError: If an unsupported window type is provided.
         """
         if isinstance(window_type, WindowType.EXPANDING):
-            return process_expanding_median(
+            return process_expanding(
                 feature=feature,
                 lens=lens,
             )
         if isinstance(window_type, WindowType.ROLLING):
-            return process_rolling_median(feature=feature, lens=lens, ts_lens=ts_lens, window_size=window_type.size)
+            return process_rolling(feature=feature, lens=lens, ts_lens=ts_lens, window_size=window_type.size)
         if isinstance(window_type, WindowType.DYNAMIC):
-            # Use specialized function for dynamic windows
-            return process_dynamic_median(feature=feature, lens=lens, ts_lens=ts_lens)
+            return process_dynamic(feature=feature, lens=lens, ts_lens=ts_lens)
 
         msg = "Unsupported window type"
         raise ValueError(msg)

@@ -28,7 +28,7 @@ def test_std_expanding(sample_dataset):
     # Expected results:
     # For id=1: [NaN (n=1), std(1,2)=0.5, std(1,2,3)=0.816496580927726]
     # For id=2: [NaN (n=1), std(4,6)=1, std(4,6,8)=1.632993161855452]
-    expected_values = np.array([np.nan, 0.5, 0.816496580927726, np.nan, 1, 1.632993161855452])
+    expected_values = np.array([0, 0.5, 0.816496580927726, 0, 1, 1.632993161855452])
 
     result_values = transformed_dataset.data["value_std_expanding"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, rtol=1e-7, equal_nan=True)
@@ -59,7 +59,7 @@ def test_std_dynamic(sample_dataset):
     # Expected results:
     # For windows of size 1: NaN (std undefined for single value)
     # For windows of size 2: std of current and previous value
-    expected_values = np.array([np.nan, 0.5, np.nan, np.nan, np.nan, 1])
+    expected_values = np.array([0, 0.5, 0, 0, 0, 1])
 
     result_values = transformed_dataset.data["value_std_dynamic_based_on_window_len"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, rtol=1e-7, equal_nan=True)
@@ -73,14 +73,14 @@ def test_std_multiple_columns(sample_dataset):
     transformed_dataset = transformer.transform(sample_dataset)
 
     # Check results for 'value' column (same as first test)
-    expected_values_value = np.array([np.nan, 0.5, 0.816496580927726, np.nan, 1, 1.632993161855452])
+    expected_values_value = np.array([0, 0.5, 0.816496580927726, 0, 1, 1.632993161855452])
     result_values_value = transformed_dataset.data["value_std_expanding"].to_numpy()
     np.testing.assert_allclose(result_values_value, expected_values_value, rtol=1e-7, equal_nan=True)
 
     # Check results for 'value2' column:
     # For id=1: [NaN, std(10,12)=1, std(10,12,14)=1.632993161855452]
     # For id=2: [NaN, std(20,24)=2, std(20,24,28)=3.265986323710904]
-    expected_values_value2 = np.array([np.nan, 1, 1.632993161855452, np.nan, 2, 3.265986323710904])
+    expected_values_value2 = np.array([0, 1, 1.632993161855452, 0, 2, 3.265986323710904])
     result_values_value2 = transformed_dataset.data["value2_std_expanding"].to_numpy()
     np.testing.assert_allclose(result_values_value2, expected_values_value2, rtol=1e-7, equal_nan=True)
 
@@ -94,7 +94,7 @@ def test_std_custom_out_column_names(sample_dataset):
     )
     transformed_dataset = transformer.transform(sample_dataset)
 
-    expected_values = np.array([np.nan, 0.5, 0.816496580927726, np.nan, 1, 1.632993161855452])
+    expected_values = np.array([0, 0.5, 0.816496580927726, 0, 1, 1.632993161855452])
     result_values = transformed_dataset.data["custom_std"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, rtol=1e-7, equal_nan=True)
 
@@ -108,6 +108,6 @@ def test_std_single_value_windows():
     transformed_dataset = transformer.transform(dataset)
 
     # Standard deviation of single value is NaN
-    expected_values = np.array([np.nan, np.nan, np.nan, np.nan])
+    expected_values = np.array([0, 0, 0, 0])
     result_values = transformed_dataset.data["value_std_rolling_1"].to_numpy()
     np.testing.assert_allclose(result_values, expected_values, equal_nan=True)

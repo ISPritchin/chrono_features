@@ -16,6 +16,7 @@ from chrono_features.features.max import MaxWithOptimization, MaxWithoutOptimiza
 from chrono_features.features.mean import MeanWithPrefixSumOptimization, MeanWithoutOptimization
 from chrono_features.features.median import MedianWithOptimization, MedianWithoutOptimization
 from chrono_features.features.min import MinWithOptimization, MinWithoutOptimization
+from chrono_features.features.std import StdWithOptimization, StdWithoutOptimization
 from chrono_features.features.sum import SumWithPrefixSumOptimization, SumWithoutOptimization
 from tests.utils.compare_multiple_implementations import compare_multiple_implementations
 from tests.utils.performance import create_dataset
@@ -122,6 +123,12 @@ def run_optimization_comparison_tests(
         pytest.param(MeanWithPrefixSumOptimization, MeanWithoutOptimization, "Mean", id="Mean"),
         pytest.param(MedianWithOptimization, MedianWithoutOptimization, "Median", id="Median"),
         pytest.param(MinWithOptimization, MinWithoutOptimization, "Min", id="Min"),
+        pytest.param(
+            StdWithOptimization,
+            StdWithoutOptimization,
+            "Std",
+            id="Std",
+        ),
         pytest.param(SumWithPrefixSumOptimization, SumWithoutOptimization, "Sum", id="Sum"),
     ],
 )

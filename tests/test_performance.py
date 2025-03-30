@@ -12,6 +12,7 @@ from chrono_features.features.max import MaxWithOptimization, MaxWithoutOptimiza
 from chrono_features.features.mean import MeanWithPrefixSumOptimization, MeanWithoutOptimization, Mean
 from chrono_features.features.median import MedianWithOptimization, MedianWithoutOptimization, Median
 from chrono_features.features.min import MinWithOptimization, MinWithoutOptimization, Min
+from chrono_features.features.std import StdWithOptimization, StdWithoutOptimization, Std
 from chrono_features.features.sum import SumWithPrefixSumOptimization, SumWithoutOptimization, Sum
 from tests.utils.performance import create_dataset_with_dynamic_windows, compare_performance
 
@@ -125,6 +126,25 @@ def test_median_performance() -> None:
         (MedianWithOptimization, "optimized"),
         (MedianWithoutOptimization, "non_optimized"),
         (Median, "strategy_selector"),
+    ]
+
+    # Run performance comparison
+    compare_performance(
+        datasets=DATASETS,
+        implementations=implementations,
+        window_types=WINDOW_TYPES,
+        output_file=OUTPUT_FILE,
+        time_threshold_seconds=TIME_THRESHOLD,
+    )
+
+
+@pytest.mark.performance
+def test_std_performance() -> None:
+    """Compare performance of Std implementations across various window types."""
+    implementations = [
+        (StdWithOptimization, "optimized"),
+        (StdWithoutOptimization, "non_optimized"),
+        (Std, "strategy_selector"),
     ]
 
     # Run performance comparison
