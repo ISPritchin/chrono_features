@@ -11,7 +11,7 @@ authors = [
 ]
 license = { file = "LICENSE" }
 requires-python = ">=3.9"
-version = "0.0.13"
+version = "0.0.14"
 
 keywords = ["timeseries", "features"]
 
@@ -157,9 +157,9 @@ max-nested-blocks = 5
 [tool.pytest.ini_options]
 markers = [
     "performance: for compare several implementations",
-    "manual_running",
+    "documentation",
 ]
-addopts = "-v -s --strict-markers --testmon -m 'not performance and not manual_running'"
+addopts = "-v -s --strict-markers --testmon -m 'not performance and not documentation'"
 
 [tool.coverage.run]
 omit = [

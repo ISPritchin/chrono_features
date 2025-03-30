@@ -17,6 +17,7 @@ A Python library for efficient time series feature generation with support for v
   - [Rolling Window Optimization for Max and Min](#rolling-window-optimization-for-max-and-min)
   - [Prefix Sum Optimization for Sum](#prefix-sum-optimization-for-sum)
   - [Prefix Sum Optimization for Absolute Sum of Changes](#prefix-sum-optimization-for-absolute-sum-of-changes)
+  - [Median Optimization](#median-optimization)
 - [License](#license)
 - [Contributing](#contributing)
 
@@ -446,6 +447,25 @@ The optimized implementation uses prefix sum arrays to efficiently calculate the
 - **Scalability**: Handles large datasets with minimal performance degradation
 
 For smaller windows, the standard implementation is used as it has less overhead for small window sizes.
+
+
+### Median Optimization
+
+The median calculation has been optimized for different window types:
+
+1. **Expanding Window Optimization**:
+   - Maintains a sorted buffer for each time series
+   - Uses insertion sort to efficiently add new values to the buffer
+   - Calculates median directly from the sorted buffer without resorting
+   - Time complexity reduced to O(n) for each new point
+
+2. **Rolling Window Optimization**:
+   - Uses a sliding window approach with a sorted buffer
+   - Efficiently removes old values and inserts new ones as the window moves
+   - Avoids resorting the entire window for each new point
+   - Particularly effective for large window sizes
+
+These optimizations significantly improve performance, especially for large datasets and window sizes.
 
 ## License
 This project is licensed under the terms of the LICENSE file (MIT License) included in the repository.

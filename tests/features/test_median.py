@@ -2,7 +2,7 @@ import numpy as np
 import polars as pl
 import pytest
 
-from chrono_features.features.median import Median  # Import the new class
+from chrono_features.features.median import Median, MedianWithoutOptimization  # Import the new class
 from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowBase, WindowType
 
@@ -38,11 +38,11 @@ class TestMedianNumbaLevel:
     def test_initialization(self, sample_window_types: dict[str, WindowBase]) -> None:
         """Test Median initialization with default and custom out_column_name."""
         # Test with default out_column_name
-        median_default = Median(columns="value", window_types=sample_window_types["expanding"])
+        median_default = MedianWithoutOptimization(columns="value", window_types=sample_window_types["expanding"])
         assert median_default.out_column_names == ["value_median_expanding"]
 
         # Test with custom out_column_name
-        median_custom = Median(
+        median_custom = MedianWithoutOptimization(
             columns="value",
             window_types=sample_window_types["rolling_full"],
             out_column_names="custom_median",
@@ -51,7 +51,7 @@ class TestMedianNumbaLevel:
 
     def test_numba_func(self) -> None:
         """Test that _numba_func correctly calculates the median of an array."""
-        median_calculator = Median(columns="value", window_types=WindowType.EXPANDING())
+        median_calculator = MedianWithoutOptimization(columns="value", window_types=WindowType.EXPANDING())
         test_array = np.array([1, 2, 3, 4, 5], dtype=np.float32)
         expected_median = np.median(test_array)
         result = median_calculator._numba_func(test_array)
@@ -194,7 +194,7 @@ class TestMedian:
 
     def test_transform_multiple_columns(self, ts_dataset_multiple_columns: TSDataset) -> None:
         """Test transform with dataset containing multiple columns."""
-        median_calculator = Median(columns=["value1", "value2"], window_types=WindowType.EXPANDING())
+        median_calculator = MedianWithoutOptimization(columns=["value1", "value2"], window_types=WindowType.EXPANDING())
         transformed_dataset = median_calculator.transform(ts_dataset_multiple_columns)
 
         # Verify new columns were added

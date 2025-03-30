@@ -11,6 +11,19 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment
 from openpyxl.utils import get_column_letter
 
+from rich.progress import (
+    Progress,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+    SpinnerColumn,
+)
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
 from chrono_features import TSDataset, WindowType
 from chrono_features.features._base import FeatureGenerator
 
@@ -44,15 +57,20 @@ def create_dataset_with_dynamic_windows(n_ids, n_timestamps, max_window_size=100
     return dataset
 
 
+# Add to imports
+
+
 def compare_performance(
     datasets: list[tuple[TSDataset, str]],
     implementations: list[tuple[type[FeatureGenerator], str]],
     window_types: list[WindowType],
     column_name: str = "value",
     output_file: str | None = None,
-) -> pd.DataFrame:
+    time_threshold_seconds=5.0,
+):
     """Compare performance of multiple implementations across different window types and datasets."""
     all_results = []
+    console = Console()
 
     # Get system info
     system_info = {
@@ -65,68 +83,192 @@ def compare_performance(
         "Total RAM (GB)": round(psutil.virtual_memory().total / (1024**3), 2),
     }
 
+    # Display system info in a nice panel
+    system_table = Table(title="System Information")
+    system_table.add_column("Property", style="cyan")
+    system_table.add_column("Value", style="green")
+
+    for key, value in system_info.items():
+        system_table.add_row(key, str(value))
+
+    console.print("")
+    console.print(Panel(system_table, title="Performance Test Environment", border_style="blue"))
+
+    # Sort datasets by number of rows (from smallest to largest)
+    datasets = sorted(datasets, key=lambda x: len(x[0].data))
+
+    # Create a table to display dataset characteristics
+    dataset_table = Table(title="Dataset Characteristics")
+    dataset_table.add_column("Dataset Name", style="cyan")
+    dataset_table.add_column("Unique IDs", style="magenta")
+    dataset_table.add_column("Timestamps per ID", style="yellow")
+    dataset_table.add_column("Total Rows", style="green")
+    dataset_table.add_column("Max Dynamic Length", style="red")
+
     # Process each dataset and collect additional info
     dataset_additional_info = {}
     for dataset, dataset_name in datasets:
+        # Get basic dataset info
+        unique_ids = dataset.data[dataset.id_column_name].n_unique()
+        timestamps_per_id = len(dataset.data) // unique_ids
+        total_rows = len(dataset.data)
+
         # Check if dynamic_len column exists and get max value
+        max_dynamic_len = "N/A"
         if "dynamic_len" in dataset.data.columns:
-            max_dynamic_len = dataset.data["dynamic_len"].max()
+            max_dynamic_len = str(dataset.data["dynamic_len"].max())
             if dataset_name not in dataset_additional_info:
                 dataset_additional_info[dataset_name] = {}
             dataset_additional_info[dataset_name]["Max dynamic_len"] = max_dynamic_len
 
-    # Process each dataset
-    for dataset, dataset_name in datasets:
-        # Process each window type
+        # Add row to the table
+        dataset_table.add_row(dataset_name, str(unique_ids), str(timestamps_per_id), str(total_rows), max_dynamic_len)
+
+    # Display the dataset characteristics table
+    console.print(Panel(dataset_table, title="Datasets to be Tested", border_style="green"))
+
+    # Display window types
+    window_table = Table(title="Window Types")
+    window_table.add_column("Window Type", style="blue")
+    window_table.add_column("Description", style="yellow")
+
+    for window_type in window_types:
+        window_table.add_row(str(window_type), _get_window_description(window_type))
+
+    console.print(Panel(window_table, title="Window Types to be Tested", border_style="magenta"))
+
+    # Dictionary to track implementations that exceeded the time threshold
+    # Key: (implementation_name, window_type_str), Value: Boolean (exceeded threshold)
+    exceeded_threshold = {}
+
+    # Calculate total number of tests to run
+    total_tests = len(datasets) * len(window_types) * len(implementations)
+
+    # Create rich progress bar
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[bold blue]{task.description}"),
+        BarColumn(bar_width=40),
+        TaskProgressColumn(),
+        TextColumn("•"),
+        TimeElapsedColumn(),
+        TextColumn("•"),
+        TimeRemainingColumn(),
+    ) as progress:
+        # Add overall task
+        overall_task = progress.add_task("[yellow]Overall Progress", total=total_tests)
+
+        # Process each window type first
         for window_type in window_types:
             window_info = str(window_type)
 
-            # Apply each implementation
+            # Add window type task
+            window_task = progress.add_task(f"[green]Window: {window_info}", total=len(implementations) * len(datasets))
+
+            # Process each implementation
             for impl_class, name in implementations:
-                # Create transformer
-                transformer = impl_class(
-                    columns=column_name,
-                    window_types=window_type,
-                    out_column_names=f"{name}_result",
-                )
+                # Add implementation task
+                impl_task = progress.add_task(f"[magenta]Implementation: {name}", total=len(datasets))
 
-                # Measure execution time
-                start_time = time.time()
-                try:
-                    _ = transformer.transform(dataset.clone())
-                    execution_time = time.time() - start_time
+                # Process each dataset (from smallest to largest)
+                for dataset_idx, (dataset, dataset_name) in enumerate(datasets):
+                    # Update task description
+                    current_test = f"[cyan]Testing: {name} on {window_info} with {dataset_name}"
+                    progress.update(overall_task, description=current_test)
 
-                    # Create result dictionary
-                    result = {
-                        "dataset_name": dataset_name,
-                        "window_type": window_info,
-                        "implementation": f"{name} ({impl_class.__name__})",
-                        "execution_time": execution_time,
-                        "dataset_info": {
-                            "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
-                            "Timestamps per ID": len(dataset.data) // dataset.data[dataset.id_column_name].n_unique(),
-                            "Total rows": len(dataset.data),
-                        },
-                    }
-                    all_results.append(result)
+                    # Check if this implementation already exceeded threshold for this window type
+                    if exceeded_threshold.get((name, window_info), False):
+                        console.print(
+                            f"[yellow]Skipping {name} with {window_info} on {dataset_name} "
+                            f"(exceeded time threshold on smaller dataset)",
+                        )
 
-                except Exception as e:  # noqa: BLE001
-                    print(f"Error with {name} on {window_type} for {dataset_name}: {e!s}")
-                    # Add result with error
-                    all_results.append(
-                        {
+                        # Create result dictionary with skipped status
+                        all_results.append(
+                            {
+                                "dataset_name": dataset_name,
+                                "window_type": window_info,
+                                "implementation": f"{name} ({impl_class.__name__})",
+                                "execution_time": "SKIPPED (time threshold exceeded)",
+                                "dataset_info": {
+                                    "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+                                    "Timestamps per ID": len(dataset.data)
+                                    // dataset.data[dataset.id_column_name].n_unique(),
+                                    "Total rows": len(dataset.data),
+                                },
+                            },
+                        )
+                        # Update progress bars
+                        progress.update(overall_task, advance=1)
+                        progress.update(window_task, advance=1)
+                        progress.update(impl_task, advance=1)
+                        continue
+
+                    # Create transformer
+                    transformer = impl_class(
+                        columns=column_name,
+                        window_types=window_type,
+                        out_column_names=f"{name}_result",
+                    )
+
+                    # Measure execution time
+                    start_time = time.time()
+                    try:
+                        _ = transformer.transform(dataset.clone())
+                        execution_time = time.time() - start_time
+
+                        # Check if execution time exceeded threshold and we're not on the last dataset
+                        if execution_time > time_threshold_seconds and dataset_idx < len(datasets) - 1:
+                            console.print(
+                                f"[red]Warning: {name} with {window_info} on {dataset_name} "
+                                f"exceeded time threshold ({execution_time:.2f}s > {time_threshold_seconds:.2f}s)",
+                            )
+                            # Mark this implementation as exceeding threshold for this window type
+                            exceeded_threshold[(name, window_info)] = True
+
+                        # Create result dictionary
+                        result = {
                             "dataset_name": dataset_name,
                             "window_type": window_info,
                             "implementation": f"{name} ({impl_class.__name__})",
-                            "execution_time": f"error: {e!s}",
+                            "execution_time": execution_time,
                             "dataset_info": {
                                 "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
                                 "Timestamps per ID": len(dataset.data)
                                 // dataset.data[dataset.id_column_name].n_unique(),
                                 "Total rows": len(dataset.data),
                             },
-                        },
-                    )
+                        }
+                        all_results.append(result)
+
+                    except Exception as e:  # noqa: BLE001
+                        console.print(f"[bold red]Error with {name} on {window_info} for {dataset_name}: {e!s}")
+                        # Add result with error
+                        all_results.append(
+                            {
+                                "dataset_name": dataset_name,
+                                "window_type": window_info,
+                                "implementation": f"{name} ({impl_class.__name__})",
+                                "execution_time": f"error: {e!s}",
+                                "dataset_info": {
+                                    "Number of unique IDs": dataset.data[dataset.id_column_name].n_unique(),
+                                    "Timestamps per ID": len(dataset.data)
+                                    // dataset.data[dataset.id_column_name].n_unique(),
+                                    "Total rows": len(dataset.data),
+                                },
+                            },
+                        )
+
+                    # Update progress bars
+                    progress.update(overall_task, advance=1)
+                    progress.update(window_task, advance=1)
+                    progress.update(impl_task, advance=1)
+
+                # Complete implementation task
+                progress.update(impl_task, completed=len(datasets))
+
+            # Complete window task
+            progress.update(window_task, completed=len(implementations) * len(datasets))
 
     # Save to Excel file if requested
     if output_file:
@@ -322,3 +464,15 @@ def compare_performance(
         print(f"Results for {sheet_name} saved to Excel file: {output_file}")
 
     return pd.DataFrame(all_results)
+
+
+# Helper function to get window type description
+def _get_window_description(window_type: WindowType) -> str:
+    """Get a human-readable description of a window type."""
+    if isinstance(window_type, WindowType.EXPANDING):
+        return "Expanding window (grows from start of time series)"
+    if isinstance(window_type, WindowType.ROLLING):
+        return f"Rolling window (fixed size: {window_type.size}, only_full: {window_type.only_full_window})"
+    if isinstance(window_type, WindowType.DYNAMIC):
+        return f"Dynamic window (variable size from column: {window_type.len_column_name})"
+    return "Unknown window type"
