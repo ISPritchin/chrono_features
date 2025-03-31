@@ -1,10 +1,10 @@
-from chrono_features.features._base import BaseFeatureGenerator
+from chrono_features.features._base import AbstractGenerator
 from chrono_features import TSDataset
 from chrono_features.features.mean import Mean
 from chrono_features.window_type import WindowType
 
 
-class SimpleMovingAverage(BaseFeatureGenerator):
+class SimpleMovingAverage(AbstractGenerator):
     """Simple moving average feature generator for time series data.
 
     Calculates the simple moving average of values within a rolling window.

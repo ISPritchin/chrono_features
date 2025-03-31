@@ -63,12 +63,11 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             window_types=window_types,
             out_column_names=out_column_names,
             func_name=func_name,
+            numba_kwargs={"lag": lag},
         )
         if lag <= 0:
             msg = "Lag must be greater than 0"
             raise ValueError(msg)
-
-        self.numba_kwargs = {"lag": lag}
 
     @staticmethod
     @numba.njit  # pragma: no cover
@@ -77,17 +76,21 @@ class Autocorrelation(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         func: callable,
         lens: np.ndarray,
         lag: int,
+        n_out_features: int = 1,  # noqa: ARG004
     ) -> np.ndarray:
         """Applies a function to sliding or expanding windows of a feature array.
 
         Args:
             feature (np.ndarray): The input feature array.
-            func (Callable): The Numba-compiled function to apply.
-            lens (np.ndarray): Array of window lengths for each point.
+            func (Callable): The Numba-compiled function to apply to each window.
+            lens (np.ndarray): Array containing the length of each window.
             lag (int): The lag value for autocorrelation calculation.
+            n_out_features (int, optional): Number of output features. Defaults to 1.
+                This parameter is not used in the current implementation.
 
         Returns:
-            np.ndarray: The result of applying the function to each window.
+            np.ndarray: Array containing the results of applying the function to each window.
+                Returns NaN for windows that are too small for the calculation.
         """
         result = np.empty(len(feature), dtype=np.float32)
         for i in numba.prange(len(result)):

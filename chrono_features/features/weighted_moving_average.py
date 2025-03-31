@@ -4,13 +4,13 @@ from collections.abc import Iterable
 
 import numpy as np
 
-from chrono_features.features._base import BaseFeatureGenerator
+from chrono_features.features._base import AbstractGenerator
 from chrono_features.features.weighted_mean import WeightedMean
 from chrono_features.ts_dataset import TSDataset
 from chrono_features.window_type import WindowType
 
 
-class WeightedMovingAverage(BaseFeatureGenerator):
+class WeightedMovingAverage(AbstractGenerator):
     """Weighted moving average feature generator for time series data.
 
     Calculates the weighted moving average of values within a rolling window.

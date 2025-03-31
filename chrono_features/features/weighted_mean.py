@@ -37,14 +37,12 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             window_types=window_types,
             out_column_names=out_column_names,
             func_name=func_name,
+            numba_kwargs={"weights": weights},
         )
 
         if weights is None:
             msg = "Weights cannot be None"
             raise ValueError(msg)
-
-        self.weights = weights
-        self.numba_kwargs = {"weights": weights}
 
     @staticmethod
     @numba.njit  # pragma: no cover
@@ -53,6 +51,7 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
         func: callable,
         lens: np.ndarray,
         weights: np.ndarray,
+        n_out_features: int = 1,
     ) -> np.ndarray:
         """Apply a weighted function to sliding or expanding windows of a feature array.
 
@@ -61,11 +60,12 @@ class WeightedMean(_FromNumbaFuncWithoutCalculatedForEachTSPoint):
             func: Numba-compiled function to apply.
             lens: Array of window lengths for each point.
             weights: Array of weights to apply to window values.
+            n_out_features: Number of output features. Defaults to 1.
 
         Returns:
             np.ndarray: Result of applying the weighted function to each window.
         """
-        result = np.empty(len(feature), dtype=np.float32)
+        result = np.empty((len(feature), n_out_features), dtype=np.float32)
         max_window_size = len(weights)
 
         for i in numba.prange(len(result)):

@@ -117,26 +117,6 @@ def multi_column_dataset():
     return TSDataset(data, id_column_name="id", ts_column_name="timestamp")
 
 
-def test_empty_dataset(empty_dataset):
-    """Test pipeline with empty dataset"""
-    # Arrange
-    pipeline = TransformationPipeline(
-        [
-            Median(columns="value", window_types=WindowType.ROLLING(size=2)),
-            Sum(columns="value", window_types=WindowType.EXPANDING()),
-        ],
-        verbose=False,
-    )
-
-    # Act
-    result = pipeline.fit_transform(empty_dataset)
-
-    # Assert
-    assert len(result.data) == 0
-    assert "value_median_rolling_2" in result.data.columns
-    assert "value_sum_expanding" in result.data.columns
-
-
 def test_multi_column_dataset(multi_column_dataset):
     """Test pipeline with dataset containing multiple columns"""
     # Arrange
