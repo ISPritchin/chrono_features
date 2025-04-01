@@ -101,6 +101,7 @@ ignore = [
     'PT011',  #`pytest.raises(ValueError)` is too broad, set the `match` parameter or use a more specific exception
     'D104',   # Missing docstring in public package
     'RET504', # 
+    'COM812',
 ]
 
 # Allow autofix for all enabled rules (when `--fix` is passed)
